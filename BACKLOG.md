@@ -37,6 +37,54 @@ oder mit Annahmen, ❌ ohne Hilfe von Luke Roberts nicht machbar.
 | M6 | Kurze Doku Seite (GitHub Pages) mit FAQ: Proxy Einrichtung, Sicherheitscode, Fehlersuche | M |
 | M7 | Langfristig: Aufnahme in HA Core. Bringt die meiste Reichweite, erfordert aber eine eigene PyPI Bibliothek für das Protokoll (`protocol.py`, `ble.py`, `cloud.py` auslagern) und Quality Scale | L |
 
+## 2b. SEO und Repo Einstellungen
+
+Stand 2026-10-20. Die GitHub Suche nach "luke roberts" liefert 26 Repos,
+davon mindestens 7 Home Assistant Integrationen (u. a.
+`tpulatha/pyLukeRoberts_hacs`, `melikeoflu/luke_roberts`,
+`NilsHempel/ha-luke-roberts-luvo`, `sebpiller/ha-luke-roberts-lampf`,
+`kneirinck/hacs-luke-roberts`). Keine hat nennenswert Sterne, der Platz ist
+also noch offen. Das größte Repo zum Thema ist `martgras/LukeRobertsControl`
+(19 Sterne, MQTT Gateway).
+
+| # | Punkt | Aufwand |
+| --- | --- | --- |
+| S1 | **Beschreibung** (Settings, About): `Home Assistant integration for Luke Roberts Model F & Luvo smart lamps (HACS): local Bluetooth control via ESPHome/Shelly proxies, scenes, uplight colour, cloud fallback`. Google nimmt sie als Titel bzw. Snippet. Wichtig sind *Model F*, *Luvo*, *HACS* und *ESPHome*, die fehlen bisher. | S |
+| S2 | **Topics** ersetzen, siehe unten | S |
+| S3 | **Website** im About Feld: der My Home Assistant Link zum Installieren über HACS (`https://my.home-assistant.io/redirect/hacs_repository/?owner=3DJupp&repository=lukeroberts-homeassistant&category=integration`), später der Forum Thread | S |
+| S4 | **Social Preview** hochladen: `docs/social-preview.png` (Settings → General → Social preview). Wird bei Links in Forum, Reddit, Signal usw. angezeigt. | S |
+| S5 | **Release Titel mit Keywords**, z. B. "0.2.0: Luke Roberts account and auto linking". Releases werden indexiert. | S |
+| S6 | **Domain Konflikt prüfen**: mehrere der anderen Integrationen nutzen vermutlich ebenfalls die Domain `luke_roberts`. Zwei davon lassen sich nicht parallel installieren, und für HACS Default kann das zur Rückfrage führen. Domains der Konkurrenz prüfen, notfalls in der README darauf hinweisen. | S |
+| S7 | **Backlinks**: Hinweis im ESPHome Repo (schon da), Forum Thread, simon42, ggf. Eintrag in "awesome-home-assistant" | S |
+| S8 | **Vergleichstabelle** zu den anderen Luke Roberts Integrationen in der README (Proxy Support, Szenen Namen, Cloud, Übersetzungen). Fair formulieren, nur belegbare Punkte. | S |
+
+### Topics: Challenge
+
+Aktuell: `bluetooth-le`, `bluetooth-proxy`, `hacs`, `hacs-integration`,
+`home-assistant`, `homeassistant-custom-component`, `luke-roberts`.
+
+* `bluetooth-le` ist ein seltenes Topic. Gesucht wird `ble` und
+  `bluetooth-low-energy`, beide ersetzen es.
+* Es fehlen die Schreibvarianten, über die HA Nutzer tatsächlich browsen:
+  `homeassistant`, `home-assistant-integration`,
+  `home-assistant-custom-component`, `custom-integration`.
+* Es fehlen Marke und Produkt in anderer Schreibweise: `lukeroberts`, `luvo`.
+  `model-f` lieber nicht, das Topic gehört den IBM Tastaturen.
+* Es fehlen die Ökosysteme, über die Leute kommen: `esphome`, `shelly`.
+* Allgemeine Kategorien: `smart-lighting`, `smart-home`, `home-automation`.
+* `python` bringt nichts, die Sprache erkennt GitHub selbst.
+
+Vorschlag, 19 von maximal 20:
+
+```
+home-assistant homeassistant home-assistant-integration
+home-assistant-custom-component homeassistant-custom-component
+hacs hacs-integration custom-integration
+luke-roberts lukeroberts luvo
+ble bluetooth-low-energy bluetooth-proxy esphome shelly
+smart-lighting smart-home home-automation
+```
+
 ## 3. Features
 
 ### F1 Firmware: Anzeige und Prüfung
