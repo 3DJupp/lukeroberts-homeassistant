@@ -17,8 +17,8 @@
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/3djupp)
 
 > [!WARNING]
-> **Early version (0.x).** This integration is new and has only been tested
-> against a simulated lamp so far. Expect bugs, rough edges and breaking
+> **Early version (0.x).** This integration is new. It has been tested on
+> real hardware, but setups vary. Expect rough edges and breaking
 > changes before 1.0. Use it at your own risk and please
 > [open an issue](https://github.com/3DJupp/lukeroberts-homeassistant/issues)
 > when something does not work, ideally with the diagnostics download and a
@@ -276,6 +276,11 @@ and dim Home Assistant lights can control it.
 Home Assistant is holding the Bluetooth connection. Lower *Keep Bluetooth
 connection after the last command* in the options, 0 releases it right after
 each command.
+
+**I already have another Luke Roberts integration installed. Can I run both?**
+No. Several community integrations use the same `luke_roberts` domain, and
+Home Assistant only loads one integration per domain. Remove the other one
+(and its folder in `custom_components`) before installing this one.
 
 ## Support the project
 
