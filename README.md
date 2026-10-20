@@ -6,6 +6,19 @@
 
 [![Validate](https://github.com/3DJupp/lukeroberts-homeassistant/actions/workflows/validate.yml/badge.svg)](https://github.com/3DJupp/lukeroberts-homeassistant/actions/workflows/validate.yml)
 [![hacs](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://hacs.xyz/docs/faq/custom_repositories)
+![version](https://img.shields.io/badge/version-0.1.0-blue.svg)
+
+> [!WARNING]
+> **Early version (0.1.x).** This integration is new and has only been tested
+> against a simulated lamp so far. Expect bugs, rough edges and breaking
+> changes before 1.0. Use it at your own risk and please
+> [open an issue](https://github.com/3DJupp/lukeroberts-homeassistant/issues)
+> when something does not work, ideally with the diagnostics download and a
+> debug log attached.
+>
+> This is an independent community project. It is **not affiliated with,
+> endorsed or supported by Luke Roberts GmbH**. See
+> [Credits and trademarks](#credits-and-trademarks).
 
 This is a native Home Assistant integration. It behaves like the Luke Roberts
 smartphone app: when a Bluetooth adapter or proxy (ESPHome, Shelly, a USB
@@ -72,11 +85,19 @@ for this integration.
 
 ## Installation
 
-### HACS
+### HACS (recommended)
 
-1. HACS → three dots → *Custom repositories* → add
-   `https://github.com/3DJupp/lukeroberts-homeassistant`, category *Integration*.
-2. Install **Luke Roberts** and restart Home Assistant.
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=3DJupp&repository=lukeroberts-homeassistant&category=integration)
+
+Or by hand:
+
+1. Open HACS, click the three dots in the top right and choose
+   *Custom repositories*.
+2. Add `https://github.com/3DJupp/lukeroberts-homeassistant` with type
+   *Integration*.
+3. Search for **Luke Roberts**, install it and restart Home Assistant.
+
+HACS offers updates automatically whenever a new release is published.
 
 ### Manual
 
@@ -155,7 +176,8 @@ cards:
 
 ## Protocols
 
-Both documents were provided by Luke Roberts and are included with permission:
+Both documents were provided by Luke Roberts GmbH and are included with their
+permission. Copyright stays with Luke Roberts GmbH or its successor company.
 
 - [Lamp Control API v1.3](docs/Lamp%20Control%20API%20v1.3.pdf) (Bluetooth LE,
   2019-07-09)
@@ -217,12 +239,29 @@ Installation über HACS (Custom Repository), danach erscheinen Lampen in
 Reichweite automatisch unter *Entdeckt*. Den Cloud API Key trägst du bei Bedarf
 in den Optionen der Integration ein.
 
-## Credits
+**Hinweis:** Das ist eine frühe Version (0.1.x). Fehler und Änderungen bis zur
+1.0 sind wahrscheinlich, Nutzung auf eigene Gefahr. Rückmeldungen gerne als
+Issue. Das Projekt ist unabhängig und steht in keiner Verbindung zur Luke
+Roberts GmbH. Name, Marken und Produkte gehören Luke Roberts bzw. der
+Nachfolgefirma.
 
-- Luke Roberts GmbH for the documented Bluetooth and cloud APIs and the
-  permission to publish them here.
-- The Home Assistant Bluetooth stack and `bleak-retry-connector`.
+## Credits and trademarks
+
+- **Luke Roberts GmbH** designed these lamps and kindly provided the Bluetooth
+  *Lamp Control API* and the *Third party REST API* documentation, and gave
+  permission to publish both documents in this repository. Thank you!
+- "Luke Roberts", "Model F", "Luvo", the product names, logos and the lamps
+  themselves are trademarks and property of Luke Roberts GmbH or its
+  successor company. They are used here only to describe compatibility.
+- The documents in [`docs/`](docs/) remain the copyright of Luke Roberts GmbH
+  or its successor company. The MIT license of this repository covers the
+  integration code only, not those documents.
+- The Home Assistant Bluetooth stack and `bleak-retry-connector` make proxy
+  based control possible.
+- Earlier ESPHome approach:
+  [lukeroberts-esphome-lampcontrol](https://github.com/3DJupp/lukeroberts-esphome-lampcontrol).
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+Integration code: MIT, see [LICENSE](LICENSE). The API documents in `docs/`
+are excluded, see above.
