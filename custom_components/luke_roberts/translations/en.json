@@ -1,0 +1,167 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Add a Luke Roberts lamp",
+        "menu_options": {
+          "pick_device": "Local via Bluetooth (adapter or Bluetooth proxy)",
+          "cloud": "Cloud only (Luke Roberts API key)"
+        }
+      },
+      "bluetooth_confirm": {
+        "description": "Set up {name}? Home Assistant will control it locally through your Bluetooth adapters and proxies."
+      },
+      "pick_device": {
+        "title": "Select the lamp",
+        "description": "Pick a lamp seen by any Bluetooth adapter or proxy, or enter its Bluetooth address.",
+        "data": {
+          "address": "Bluetooth address"
+        }
+      },
+      "cloud": {
+        "title": "Luke Roberts cloud",
+        "description": "Create a personal API key at https://cloud.luke-roberts.com/app",
+        "data": {
+          "api_key": "API key"
+        }
+      },
+      "cloud_lamp": {
+        "title": "Select the lamp",
+        "data": {
+          "cloud_lamp_id": "Lamp"
+        }
+      },
+      "reauth_confirm": {
+        "title": "New API key",
+        "description": "The Luke Roberts cloud rejected the stored API key.",
+        "data": {
+          "api_key": "API key"
+        }
+      }
+    },
+    "error": {
+      "invalid_address": "This is not a valid Bluetooth address.",
+      "invalid_auth": "The API key was rejected.",
+      "cannot_connect": "Could not reach the Luke Roberts cloud.",
+      "no_lamps": "No lamps were found in this account."
+    },
+    "abort": {
+      "already_configured": "This lamp is already configured.",
+      "reauth_successful": "The API key was updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Connection",
+        "description": "Bluetooth is local and fast. Add a cloud API key to reach the lamp when no adapter or proxy is in range.",
+        "data": {
+          "connection_mode": "Connection mode",
+          "linger": "Keep Bluetooth connection after the last command",
+          "api_key": "Cloud API key (optional)"
+        },
+        "data_description": {
+          "linger": "While connected the Luke Roberts app shows the lamp as in use. 0 disconnects right after each command.",
+          "api_key": "Personal API key from https://cloud.luke-roberts.com/app. Leave empty to stay local only."
+        }
+      },
+      "cloud_lamp": {
+        "title": "Link cloud lamp",
+        "data": {
+          "cloud_lamp_id": "Lamp"
+        }
+      }
+    },
+    "error": {
+      "api_key_required": "This connection mode needs a cloud API key.",
+      "invalid_auth": "The API key was rejected.",
+      "cannot_connect": "Could not reach the Luke Roberts cloud.",
+      "no_lamps": "No lamps were found in this account."
+    }
+  },
+  "selector": {
+    "connection_mode": {
+      "options": {
+        "local_first": "Bluetooth first, cloud as fallback",
+        "local_only": "Bluetooth only",
+        "cloud_first": "Cloud first, Bluetooth as fallback",
+        "cloud_only": "Cloud only"
+      }
+    }
+  },
+  "entity": {
+    "button": {
+      "next_brighter_scene": {
+        "name": "Next brighter scene"
+      },
+      "next_dimmer_scene": {
+        "name": "Next dimmer scene"
+      },
+      "brighter": {
+        "name": "Brighter"
+      },
+      "dimmer": {
+        "name": "Dimmer"
+      },
+      "refresh_scenes": {
+        "name": "Refresh scenes"
+      },
+      "ping": {
+        "name": "Ping"
+      }
+    },
+    "select": {
+      "scene": {
+        "name": "Scene"
+      }
+    },
+    "sensor": {
+      "last_route": {
+        "name": "Last command route",
+        "state": {
+          "bluetooth": "Bluetooth",
+          "cloud": "Cloud"
+        }
+      },
+      "last_status": {
+        "name": "Last response"
+      },
+      "api_version": {
+        "name": "API version"
+      }
+    }
+  },
+  "services": {
+    "immediate_light": {
+      "name": "Immediate light",
+      "description": "Temporarily change the uplight colour and/or downlight of the current scene (Bluetooth only). Lost when another scene is selected.",
+      "fields": {
+        "uplight_hs_color": {
+          "name": "Uplight hue/saturation",
+          "description": "[hue 0-360, saturation 0-100] for the indirect light."
+        },
+        "uplight_kelvin": {
+          "name": "Uplight colour temperature",
+          "description": "White uplight instead of a colour."
+        },
+        "uplight_brightness": {
+          "name": "Uplight brightness",
+          "description": "Brightness of the uplight."
+        },
+        "downlight_kelvin": {
+          "name": "Downlight colour temperature",
+          "description": "Colour temperature of the direct light."
+        },
+        "downlight_brightness": {
+          "name": "Downlight brightness",
+          "description": "Brightness of the direct light."
+        },
+        "duration": {
+          "name": "Duration",
+          "description": "Revert to the scene after this time (max 65 s). 0 keeps it."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,167 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Luke Roberts Lampe hinzufügen",
+        "menu_options": {
+          "pick_device": "Lokal über Bluetooth (Adapter oder Bluetooth Proxy)",
+          "cloud": "Nur Cloud (Luke Roberts API Key)"
+        }
+      },
+      "bluetooth_confirm": {
+        "description": "{name} einrichten? Home Assistant steuert die Lampe lokal über deine Bluetooth Adapter und Proxies."
+      },
+      "pick_device": {
+        "title": "Lampe auswählen",
+        "description": "Wähle eine Lampe, die ein Bluetooth Adapter oder Proxy sieht, oder gib ihre Bluetooth Adresse ein.",
+        "data": {
+          "address": "Bluetooth Adresse"
+        }
+      },
+      "cloud": {
+        "title": "Luke Roberts Cloud",
+        "description": "Einen persönlichen API Key erstellst du unter https://cloud.luke-roberts.com/app",
+        "data": {
+          "api_key": "API Key"
+        }
+      },
+      "cloud_lamp": {
+        "title": "Lampe auswählen",
+        "data": {
+          "cloud_lamp_id": "Lampe"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Neuer API Key",
+        "description": "Die Luke Roberts Cloud hat den gespeicherten API Key abgelehnt.",
+        "data": {
+          "api_key": "API Key"
+        }
+      }
+    },
+    "error": {
+      "invalid_address": "Das ist keine gültige Bluetooth Adresse.",
+      "invalid_auth": "Der API Key wurde abgelehnt.",
+      "cannot_connect": "Die Luke Roberts Cloud ist nicht erreichbar.",
+      "no_lamps": "In diesem Konto wurden keine Lampen gefunden."
+    },
+    "abort": {
+      "already_configured": "Diese Lampe ist bereits eingerichtet.",
+      "reauth_successful": "Der API Key wurde aktualisiert."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Verbindung",
+        "description": "Bluetooth ist lokal und schnell. Mit einem Cloud API Key bleibt die Lampe erreichbar, wenn kein Adapter oder Proxy in Reichweite ist.",
+        "data": {
+          "connection_mode": "Verbindungsart",
+          "linger": "Bluetooth Verbindung nach dem letzten Befehl halten",
+          "api_key": "Cloud API Key (optional)"
+        },
+        "data_description": {
+          "linger": "Solange verbunden, zeigt die Luke Roberts App die Lampe als belegt an. 0 trennt direkt nach jedem Befehl.",
+          "api_key": "Persönlicher API Key von https://cloud.luke-roberts.com/app. Leer lassen für rein lokalen Betrieb."
+        }
+      },
+      "cloud_lamp": {
+        "title": "Cloud Lampe verknüpfen",
+        "data": {
+          "cloud_lamp_id": "Lampe"
+        }
+      }
+    },
+    "error": {
+      "api_key_required": "Für diese Verbindungsart wird ein Cloud API Key benötigt.",
+      "invalid_auth": "Der API Key wurde abgelehnt.",
+      "cannot_connect": "Die Luke Roberts Cloud ist nicht erreichbar.",
+      "no_lamps": "In diesem Konto wurden keine Lampen gefunden."
+    }
+  },
+  "selector": {
+    "connection_mode": {
+      "options": {
+        "local_first": "Zuerst Bluetooth, Cloud als Rückfall",
+        "local_only": "Nur Bluetooth",
+        "cloud_first": "Zuerst Cloud, Bluetooth als Rückfall",
+        "cloud_only": "Nur Cloud"
+      }
+    }
+  },
+  "entity": {
+    "button": {
+      "next_brighter_scene": {
+        "name": "Nächst hellere Szene"
+      },
+      "next_dimmer_scene": {
+        "name": "Nächst dunklere Szene"
+      },
+      "brighter": {
+        "name": "Heller"
+      },
+      "dimmer": {
+        "name": "Dunkler"
+      },
+      "refresh_scenes": {
+        "name": "Szenen neu laden"
+      },
+      "ping": {
+        "name": "Ping"
+      }
+    },
+    "select": {
+      "scene": {
+        "name": "Szene"
+      }
+    },
+    "sensor": {
+      "last_route": {
+        "name": "Letzter Übertragungsweg",
+        "state": {
+          "bluetooth": "Bluetooth",
+          "cloud": "Cloud"
+        }
+      },
+      "last_status": {
+        "name": "Letzte Antwort"
+      },
+      "api_version": {
+        "name": "API Version"
+      }
+    }
+  },
+  "services": {
+    "immediate_light": {
+      "name": "Sofortlicht",
+      "description": "Ändert Uplight Farbe und/oder Downlight der aktuellen Szene vorübergehend (nur Bluetooth). Geht beim Szenenwechsel verloren.",
+      "fields": {
+        "uplight_hs_color": {
+          "name": "Uplight Farbton/Sättigung",
+          "description": "[Farbton 0-360, Sättigung 0-100] für das indirekte Licht."
+        },
+        "uplight_kelvin": {
+          "name": "Uplight Farbtemperatur",
+          "description": "Weißes Uplight statt einer Farbe."
+        },
+        "uplight_brightness": {
+          "name": "Uplight Helligkeit",
+          "description": "Helligkeit des Uplights."
+        },
+        "downlight_kelvin": {
+          "name": "Downlight Farbtemperatur",
+          "description": "Farbtemperatur des direkten Lichts."
+        },
+        "downlight_brightness": {
+          "name": "Downlight Helligkeit",
+          "description": "Helligkeit des direkten Lichts."
+        },
+        "duration": {
+          "name": "Dauer",
+          "description": "Nach dieser Zeit zur Szene zurückkehren (max. 65 s). 0 behält die Änderung."
+        }
+      }
+    }
+  }
+}

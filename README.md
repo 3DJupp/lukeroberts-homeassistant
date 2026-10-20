@@ -1,2 +1,228 @@
-# lukeroberts-homeassistant
-Control the Luke Roberts BLE-controllable Lights via Home Assistant
+# Luke Roberts for Home Assistant
+
+> Control Luke Roberts smart lamps (Model F / Luvo) from Home Assistant, locally
+> over Bluetooth through the adapters and Bluetooth proxies you already have,
+> with the Luke Roberts cloud as an optional fallback.
+
+[![Validate](https://github.com/3DJupp/lukeroberts-homeassistant/actions/workflows/validate.yml/badge.svg)](https://github.com/3DJupp/lukeroberts-homeassistant/actions/workflows/validate.yml)
+[![hacs](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://hacs.xyz/docs/faq/custom_repositories)
+
+This is a native Home Assistant integration. It behaves like the Luke Roberts
+smartphone app: when a Bluetooth adapter or proxy (ESPHome, Shelly, a USB
+dongle on the HA host, ...) can reach the lamp, commands go straight to it over
+Bluetooth LE. If the lamp is out of range and you added a cloud API key, the
+command is sent through the Luke Roberts cloud instead.
+
+## Background: the ESPHome gateway
+
+The first approach was a dedicated ESP32 per lamp running ESPHome:
+**[3DJupp/lukeroberts-esphome-lampcontrol](https://github.com/3DJupp/lukeroberts-esphome-lampcontrol)**.
+It works well, but it needs its own firmware, one board per lamp and a pile of
+template buttons and helper automations for scene names.
+
+This integration moves the protocol into Home Assistant itself. Everything the
+ESPHome gateway learned about the lamp (frame layout, the 8 second idle
+disconnect, scene discovery via Query Scene, ping keepalive) is reused here,
+but the radio part is left to Home Assistant's Bluetooth stack. That means:
+
+| | ESPHome gateway | This integration |
+| --- | --- | --- |
+| Extra hardware | one ESP32 per lamp | none, any existing adapter or proxy |
+| Firmware to maintain | yes | no |
+| Lamp entity | buttons and sensors | one `light` with brightness, colour temperature and scenes as effects |
+| Scene dropdown with real names | needs the HA package from that repo | built in, updates automatically |
+| Cloud fallback | no | optional |
+| Multiple lamps | one config per lamp | add as many as you like |
+
+If you already run the ESPHome gateway on an ESP32, you can keep using that
+board as a plain [Bluetooth proxy](https://esphome.io/components/bluetooth_proxy.html)
+for this integration.
+
+## Features
+
+- **Auto discovery** of lamps through every Bluetooth adapter and proxy
+- **Light entity**: on/off, brightness, colour temperature (2700 K to 4000 K),
+  scenes as effects
+- **Scene select** filled with the scene names stored in the lamp (read with
+  `Query Scene` on startup, refresh with a button)
+- Buttons for next brighter / dimmer scene, brighter / dimmer (relative
+  brightness), refresh scenes and ping
+- `luke_roberts.immediate_light` action for the transient Immediate Light
+  command, including the **coloured uplight** (hue/saturation) and the
+  downlight, with optional automatic revert
+- **Connection modes**: Bluetooth first with cloud fallback, Bluetooth only,
+  cloud first, cloud only
+- Short lived Bluetooth connections: the link is kept alive with pings for a
+  configurable time after the last command, then released so the Luke Roberts
+  app can connect again
+- Lamps with a security code (status `FC Forbidden`) automatically fall back to
+  the cloud if configured
+- Device info (model, firmware, hardware revision) read from the lamp
+- Diagnostics download with the API key redacted
+- English and German translations
+
+## Requirements
+
+- Home Assistant 2025.2 or newer with the Bluetooth integration set up
+- At least one connectable Bluetooth adapter or proxy within range of the lamp.
+  ESPHome proxies need `bluetooth_proxy: active: true`; Shelly Gen2+ devices
+  need Bluetooth gateway enabled with active scanning.
+- Optional: a personal API key from <https://cloud.luke-roberts.com/app> for
+  the cloud fallback
+
+## Installation
+
+### HACS
+
+1. HACS → three dots → *Custom repositories* → add
+   `https://github.com/3DJupp/lukeroberts-homeassistant`, category *Integration*.
+2. Install **Luke Roberts** and restart Home Assistant.
+
+### Manual
+
+Copy `custom_components/luke_roberts` into `<config>/custom_components/` and
+restart Home Assistant.
+
+## Setup
+
+Lamps in range show up under *Settings → Devices & services → Discovered*.
+Otherwise use *Add integration → Luke Roberts* and choose:
+
+- **Local via Bluetooth**: pick a discovered lamp or type its Bluetooth address
+- **Cloud only**: enter the API key and pick a lamp from your account. Useful
+  for lamps no adapter or proxy can reach.
+
+To add the cloud fallback to a Bluetooth lamp, open the integration's
+**Configure** dialog, enter the API key and link the matching cloud lamp. The
+dialog also sets the connection mode and how long the Bluetooth link is kept
+after the last command (default 30 s, 0 disconnects immediately).
+
+## Entities
+
+| Entity | Description |
+| --- | --- |
+| `light.<lamp>` | On/off, brightness, colour temperature, scenes as effects |
+| `select.<lamp>_scene` | Scene picker with the names from the lamp |
+| `button.<lamp>_next_brighter_scene` / `_next_dimmer_scene` | Opcode `06` |
+| `button.<lamp>_brighter` / `_dimmer` | Relative brightness ×1.2 / ×0.8 (opcode `08`) |
+| `button.<lamp>_refresh_scenes` | Re-read scene names (diagnostic) |
+| `button.<lamp>_ping` | Ping (diagnostic, disabled by default) |
+| `sensor.<lamp>_last_command_route` | `bluetooth` or `cloud` (diagnostic) |
+| `sensor.<lamp>_last_response` | Last status from the lamp (diagnostic) |
+| `sensor.<lamp>_api_version` | API version from Ping (diagnostic, disabled by default) |
+
+Buttons only work over Bluetooth, the cloud API has no equivalent.
+
+### How state works
+
+The lamp cannot report its current state over Bluetooth, so the integration
+keeps an *assumed state* based on the commands it sent (like the ESPHome
+gateway did). Brightness is relative to the active scene: 100 % is the scene as
+designed in the app. Changes made with the app or the lamp's click detection
+are not visible locally. If the cloud is linked, the integration also polls
+`GET /lamps/{id}/state` every minute to correct the assumed state.
+
+### Immediate light example
+
+```yaml
+action: luke_roberts.immediate_light
+target:
+  entity_id: light.esstisch
+data:
+  uplight_hs_color: [30, 80]   # hue 0-360, saturation 0-100
+  uplight_brightness: 60       # %
+  downlight_kelvin: 2700
+  downlight_brightness: 40     # %
+  duration:
+    seconds: 10                # 0 = keep until the next scene change
+```
+
+### Dashboard example
+
+```yaml
+type: vertical-stack
+cards:
+  - type: tile
+    entity: light.esstisch
+    features:
+      - type: light-brightness
+      - type: light-color-temp
+  - type: tile
+    entity: select.esstisch_scene
+    features:
+      - type: select-options
+```
+
+## Protocols
+
+Both documents were provided by Luke Roberts and are included with permission:
+
+- [Lamp Control API v1.3](docs/Lamp%20Control%20API%20v1.3.pdf) (Bluetooth LE,
+  2019-07-09)
+- [Third party REST API v1.0 draft](docs/LR%20Cloud%20REST%20API%20v1.0.pdf)
+  (cloud)
+
+### Bluetooth LE
+
+Service `44092840-0567-11E6-B862-0002A5D5C51B`, commands are written to
+characteristic `44092842-0567-11E6-B862-0002A5D5C51B` and answered with an
+indication on the same characteristic. Every frame starts with `A0` and the API
+version.
+
+| Action | Opcode | Frame |
+| --- | :---: | --- |
+| Ping | 00 | `A0 02 00` → `00 VV` |
+| Query Scene | 01 | `A0 01 01 II` → `00 01 NN <name> 00` |
+| Immediate Light | 02 | `A0 01 02 XX DDDD [SS HHHH BB] [KKKK BB]` |
+| Brightness | 03 | `A0 01 03 PP` |
+| Colour temperature | 04 | `A0 01 04 KKKK` |
+| Select Scene | 05 | `A0 02 05 II` (`00` off, `FF` default) |
+| Next scene by brightness | 06 | `A0 02 06 DD` |
+| Adjust colour temperature | 07 | `A0 02 07 KKKK` |
+| Relative brightness | 08 | `A0 02 08 PP` |
+
+Status codes: `00` OK, `81` invalid parameters, `84` invalid id, `87` invalid
+version, `BC` bad command, `FC` forbidden (security code set in the app).
+
+### Cloud
+
+`https://cloud.luke-roberts.com/api/v1`, `Authorization: Bearer <api key>`.
+`GET /lamps` lists the lamps, `PUT /lamps/{id}/command` takes
+`{"power": "ON"|"OFF"}`, `{"brightness": 0..100}`, `{"kelvin": 2700..4000}` or
+`{"scene": 0..31}`. Commands are queued; there is no confirmation that the lamp
+executed them.
+
+## Development
+
+```bash
+python -m venv .venv && . .venv/bin/activate
+pip install -r requirements_test.txt ruff
+pytest
+ruff check . && ruff format --check .
+```
+
+The protocol layer (`protocol.py`) has no Home Assistant imports and is tested
+against the byte sequences from the API document. `tests/test_init.py` runs the
+full integration against a simulated lamp.
+
+## Kurzfassung (Deutsch)
+
+Native Home Assistant Integration für Luke Roberts Lampen. Gesteuert wird lokal
+per Bluetooth über die vorhandenen Adapter und Bluetooth Proxies (ESPHome,
+Shelly, ...), optional mit der Luke Roberts Cloud als Rückfallebene, also so wie
+die Smartphone App. Der erste Ansatz mit einem eigenen ESP32 pro Lampe liegt in
+[lukeroberts-esphome-lampcontrol](https://github.com/3DJupp/lukeroberts-esphome-lampcontrol);
+ein vorhandener ESP32 kann einfach als Bluetooth Proxy weiterverwendet werden.
+Installation über HACS (Custom Repository), danach erscheinen Lampen in
+Reichweite automatisch unter *Entdeckt*. Den Cloud API Key trägst du bei Bedarf
+in den Optionen der Integration ein.
+
+## Credits
+
+- Luke Roberts GmbH for the documented Bluetooth and cloud APIs and the
+  permission to publish them here.
+- The Home Assistant Bluetooth stack and `bleak-retry-connector`.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
