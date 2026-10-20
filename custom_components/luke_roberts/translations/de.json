@@ -21,7 +21,7 @@
       },
       "cloud": {
         "title": "Luke Roberts Cloud",
-        "description": "Einen persönlichen API Key erstellst du unter https://cloud.luke-roberts.com/app",
+        "description": "Einen persönlichen API Key erstellst du unter {cloud_url}",
         "data": {
           "api_key": "API Key"
         }
@@ -63,7 +63,7 @@
         },
         "data_description": {
           "linger": "Solange verbunden, zeigt die Luke Roberts App die Lampe als belegt an. 0 trennt direkt nach jedem Befehl.",
-          "api_key": "Persönlicher API Key von https://cloud.luke-roberts.com/app. Leer lassen für rein lokalen Betrieb."
+          "api_key": "Persönlicher API Key von {cloud_url}. Leer lassen für rein lokalen Betrieb."
         }
       },
       "cloud_lamp": {

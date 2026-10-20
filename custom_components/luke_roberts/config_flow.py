@@ -35,6 +35,7 @@ import voluptuous as vol
 
 from .cloud import CloudAuthError, CloudError, CloudLamp, LukeRobertsCloud
 from .const import (
+    CLOUD_APP_URL,
     CONF_API_KEY,
     CONF_CLOUD_LAMP_ID,
     CONF_CONNECTION_MODE,
@@ -51,6 +52,8 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 _NAME_HINTS = ("luke", "luvo", "lrbt")
+
+CLOUD_PLACEHOLDERS = {"cloud_url": CLOUD_APP_URL}
 
 
 def is_luke_roberts(info: BluetoothServiceInfoBleak) -> bool:
@@ -217,6 +220,7 @@ class LukeRobertsConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="cloud",
             data_schema=vol.Schema({vol.Required(CONF_API_KEY): API_KEY_SELECTOR}),
             errors=errors,
+            description_placeholders=CLOUD_PLACEHOLDERS,
         )
 
     async def _async_load_lamps(self) -> dict[str, str]:
@@ -372,7 +376,10 @@ class LukeRobertsOptionsFlow(OptionsFlow):
             )
         ] = API_KEY_SELECTOR
         return self.async_show_form(
-            step_id="init", data_schema=vol.Schema(schema), errors=errors
+            step_id="init",
+            data_schema=vol.Schema(schema),
+            errors=errors,
+            description_placeholders=CLOUD_PLACEHOLDERS,
         )
 
     async def async_step_cloud_lamp(

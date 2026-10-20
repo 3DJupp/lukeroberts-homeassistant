@@ -21,7 +21,7 @@
       },
       "cloud": {
         "title": "Luke Roberts cloud",
-        "description": "Create a personal API key at https://cloud.luke-roberts.com/app",
+        "description": "Create a personal API key at {cloud_url}",
         "data": {
           "api_key": "API key"
         }
@@ -63,7 +63,7 @@
         },
         "data_description": {
           "linger": "While connected the Luke Roberts app shows the lamp as in use. 0 disconnects right after each command.",
-          "api_key": "Personal API key from https://cloud.luke-roberts.com/app. Leave empty to stay local only."
+          "api_key": "Personal API key from {cloud_url}. Leave empty to stay local only."
         }
       },
       "cloud_lamp": {

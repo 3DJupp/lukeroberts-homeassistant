@@ -29,6 +29,7 @@ RESPONSE_TIMEOUT: Final = 5.0
 
 # --- Cloud (Third party REST API v1.0) --------------------------------------
 CLOUD_BASE_URL: Final = "https://cloud.luke-roberts.com/api/v1"
+CLOUD_APP_URL: Final = "https://cloud.luke-roberts.com/app"
 
 # --- Config entry keys ------------------------------------------------------
 CONF_API_KEY: Final = "api_key"
