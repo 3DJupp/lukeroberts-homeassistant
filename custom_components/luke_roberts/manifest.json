@@ -1,0 +1,20 @@
+{
+  "domain": "luke_roberts",
+  "name": "Luke Roberts",
+  "bluetooth": [
+    {
+      "service_uuid": "44092840-0567-11e6-b862-0002a5d5c51b",
+      "connectable": true
+    }
+  ],
+  "codeowners": ["@3DJupp"],
+  "config_flow": true,
+  "dependencies": ["bluetooth_adapters"],
+  "documentation": "https://github.com/3DJupp/lukeroberts-homeassistant",
+  "integration_type": "device",
+  "iot_class": "assumed_state",
+  "issue_tracker": "https://github.com/3DJupp/lukeroberts-homeassistant/issues",
+  "loggers": ["custom_components.luke_roberts"],
+  "requirements": ["bleak-retry-connector>=3.5.0"],
+  "version": "0.1.0"
+}

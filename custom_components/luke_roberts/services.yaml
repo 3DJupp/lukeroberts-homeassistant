@@ -1,0 +1,39 @@
+immediate_light:
+  target:
+    entity:
+      integration: luke_roberts
+      domain: light
+  fields:
+    uplight_hs_color:
+      example: "[30, 80]"
+      selector:
+        object:
+    uplight_kelvin:
+      selector:
+        color_temp:
+          unit: kelvin
+          min: 2700
+          max: 4000
+    uplight_brightness:
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+    downlight_kelvin:
+      selector:
+        color_temp:
+          unit: kelvin
+          min: 2700
+          max: 4000
+    downlight_brightness:
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+    duration:
+      default:
+        seconds: 0
+      selector:
+        duration:
