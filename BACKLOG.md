@@ -10,10 +10,10 @@ oder mit Annahmen, ❌ ohne Hilfe von Luke Roberts nicht machbar.
 
 | # | Punkt | Warum | Aufwand |
 | --- | --- | --- | --- |
-| R1 | **Test an echter Hardware** (Model F und Luvo, verschiedene Firmware, ESPHome Proxy, Shelly, USB Adapter) | Bisher nur gegen eine simulierte Lampe getestet. Größtes Risiko für Vertrauen und Bewertungen. Beta Tester über Forum suchen. | M |
-| R2 | **Erstes Release taggen** (`v0.2.0`) und danach regelmäßig releasen | HACS zeigt Updates nur für Releases. Release Workflow ist schon da. | S |
+| R1 | ✅ **Erledigt 2026-10-20:** erfolgreich an echter Hardware getestet. **Test an echter Hardware** (Model F und Luvo, verschiedene Firmware, ESPHome Proxy, Shelly, USB Adapter) | Bisher nur gegen eine simulierte Lampe getestet. Größtes Risiko für Vertrauen und Bewertungen. Beta Tester über Forum suchen. | M |
+| R2 | ✅ **Erledigt 2026-10-20:** v0.2.0 veröffentlicht. **Erstes Release taggen** (`v0.2.0`) und danach regelmäßig releasen | HACS zeigt Updates nur für Releases. Release Workflow ist schon da. | S |
 | R3 | **Aufnahme in HACS Default** | Ohne Default Repo muss jeder die URL kennen. Voraussetzungen: Releases, Beschreibung und Topics im Repo, gültige `hacs.json`, Brand Bilder, grüne HACS Action. PR an `hacs/default`. | S |
-| R4 | **Repo Metadaten**: Beschreibung, Topics (`home-assistant`, `hacs`, `bluetooth`, `luke-roberts`, `smart-lamp`), Website Link, Social Preview Bild | Auffindbarkeit auf GitHub und Google | S |
+| R4 | ✅ **Erledigt 2026-10-20.** **Repo Metadaten**: Beschreibung, Topics (`home-assistant`, `hacs`, `bluetooth`, `luke-roberts`, `smart-lamp`), Website Link, Social Preview Bild | Auffindbarkeit auf GitHub und Google | S |
 | R5 | **Screenshots / kurzes GIF in der README** (Einrichtung, Tile Card, Szenen Dropdown) | Der erste Eindruck entscheidet, ob jemand installiert | S |
 | R6 | **Originallogo** mit Freigabe von Luke Roberts in `brand/` | Wiedererkennung in der HA Oberfläche | S |
 | R7 | **Testabdeckung messen** (pytest-cov, Badge) und Lücken schließen (button, select, sensor, diagnostics, Options Flow Pfade) | Qualitätssignal, schützt vor Regressionen | M |
@@ -49,12 +49,12 @@ also noch offen. Das größte Repo zum Thema ist `martgras/LukeRobertsControl`
 
 | # | Punkt | Aufwand |
 | --- | --- | --- |
-| S1 | **Beschreibung** (Settings, About): `Home Assistant integration for Luke Roberts Model F & Luvo smart lamps (HACS): local Bluetooth control via ESPHome/Shelly proxies, scenes, uplight colour, cloud fallback`. Google nimmt sie als Titel bzw. Snippet. Wichtig sind *Model F*, *Luvo*, *HACS* und *ESPHome*, die fehlen bisher. | S |
-| S2 | **Topics** ersetzen, siehe unten | S |
-| S3 | **Website** im About Feld: der My Home Assistant Link zum Installieren über HACS (`https://my.home-assistant.io/redirect/hacs_repository/?owner=3DJupp&repository=lukeroberts-homeassistant&category=integration`), später der Forum Thread | S |
-| S4 | **Social Preview** hochladen: `docs/social-preview.png` (Settings → General → Social preview). Wird bei Links in Forum, Reddit, Signal usw. angezeigt. | S |
-| S5 | **Release Titel mit Keywords**, z. B. "0.2.0: Luke Roberts account and auto linking". Releases werden indexiert. | S |
-| S6 | **Domain Konflikt prüfen**: mehrere der anderen Integrationen nutzen vermutlich ebenfalls die Domain `luke_roberts`. Zwei davon lassen sich nicht parallel installieren, und für HACS Default kann das zur Rückfrage führen. Domains der Konkurrenz prüfen, notfalls in der README darauf hinweisen. | S |
+| S1 | ✅ **Erledigt.** **Beschreibung** (Settings, About): `Home Assistant integration for Luke Roberts Model F & Luvo smart lamps (HACS): local Bluetooth control via ESPHome/Shelly proxies, scenes, uplight colour, cloud fallback`. Google nimmt sie als Titel bzw. Snippet. Wichtig sind *Model F*, *Luvo*, *HACS* und *ESPHome*, die fehlen bisher. | S |
+| S2 | ✅ **Erledigt.** **Topics** ersetzen, siehe unten | S |
+| S3 | ✅ **Erledigt.** **Website** im About Feld: der My Home Assistant Link zum Installieren über HACS (`https://my.home-assistant.io/redirect/hacs_repository/?owner=3DJupp&repository=lukeroberts-homeassistant&category=integration`), später der Forum Thread | S |
+| S4 | ✅ **Erledigt.** **Social Preview** hochladen: `docs/social-preview.png` (Settings → General → Social preview). Wird bei Links in Forum, Reddit, Signal usw. angezeigt. | S |
+| S5 | ✅ **Erledigt.** **Release Titel mit Keywords**, z. B. "0.2.0: Luke Roberts account and auto linking". Releases werden indexiert. | S |
+| S6 | ✅ **Geprüft 2026-10-20:** `luke_roberts` nutzen auch kneirinck/hacs-luke-roberts, tpulatha/pyLukeRoberts_hacs, zschakDev/luke_roberts_lamp_test und melikeoflu/luke_roberts. Keine davon ist in HACS Default oder HA Core, die Domain bleibt. FAQ Hinweis ergänzt. **Domain Konflikt prüfen**: mehrere der anderen Integrationen nutzen vermutlich ebenfalls die Domain `luke_roberts`. Zwei davon lassen sich nicht parallel installieren, und für HACS Default kann das zur Rückfrage führen. Domains der Konkurrenz prüfen, notfalls in der README darauf hinweisen. | S |
 | S7 | **Backlinks**: Hinweis im ESPHome Repo (schon da), Forum Thread, simon42, ggf. Eintrag in "awesome-home-assistant" | S |
 | S8 | **Vergleichstabelle** zu den anderen Luke Roberts Integrationen in der README (Proxy Support, Szenen Namen, Cloud, Übersetzungen). Fair formulieren, nur belegbare Punkte. | S |
 
