@@ -1,16 +1,24 @@
+<p align="center">
+  <img src="custom_components/luke_roberts/brand/icon.png" alt="Luke Roberts Home Assistant integration icon: pendant lamp with uplight and downlight" width="128">
+</p>
+
 # Luke Roberts for Home Assistant
 
-> Control Luke Roberts smart lamps (Model F / Luvo) from Home Assistant, locally
-> over Bluetooth through the adapters and Bluetooth proxies you already have,
-> with the Luke Roberts cloud as an optional fallback.
+> Home Assistant integration for **Luke Roberts Model F and Luvo** smart lamps.
+> Local control over Bluetooth through the adapters, ESPHome and Shelly
+> Bluetooth proxies you already have, with scenes, brightness, colour
+> temperature, uplight colour and the Luke Roberts cloud as optional fallback.
+> Installable via HACS, no extra hardware, no extra firmware.
 
 [![Validate](https://github.com/3DJupp/lukeroberts-homeassistant/actions/workflows/validate.yml/badge.svg)](https://github.com/3DJupp/lukeroberts-homeassistant/actions/workflows/validate.yml)
 [![hacs](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://hacs.xyz/docs/faq/custom_repositories)
-![version](https://img.shields.io/badge/version-0.1.0-blue.svg)
+[![GitHub release](https://img.shields.io/github/v/release/3DJupp/lukeroberts-homeassistant?include_prereleases)](https://github.com/3DJupp/lukeroberts-homeassistant/releases)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-support-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/3djupp)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/3djupp)
 
 > [!WARNING]
-> **Early version (0.1.x).** This integration is new and has only been tested
-> against a simulated lamp so far. Expect bugs, rough edges and breaking
+> **Early version (0.x).** This integration is new. It has been tested on
+> real hardware, but setups vary. Expect rough edges and breaking
 > changes before 1.0. Use it at your own risk and please
 > [open an issue](https://github.com/3DJupp/lukeroberts-homeassistant/issues)
 > when something does not work, ideally with the diagnostics download and a
@@ -23,37 +31,15 @@
 This is a native Home Assistant integration. It behaves like the Luke Roberts
 smartphone app: when a Bluetooth adapter or proxy (ESPHome, Shelly, a USB
 dongle on the HA host, ...) can reach the lamp, commands go straight to it over
-Bluetooth LE. If the lamp is out of range and you added a cloud API key, the
-command is sent through the Luke Roberts cloud instead.
-
-## Background: the ESPHome gateway
-
-The first approach was a dedicated ESP32 per lamp running ESPHome:
-**[3DJupp/lukeroberts-esphome-lampcontrol](https://github.com/3DJupp/lukeroberts-esphome-lampcontrol)**.
-It works well, but it needs its own firmware, one board per lamp and a pile of
-template buttons and helper automations for scene names.
-
-This integration moves the protocol into Home Assistant itself. Everything the
-ESPHome gateway learned about the lamp (frame layout, the 8 second idle
-disconnect, scene discovery via Query Scene, ping keepalive) is reused here,
-but the radio part is left to Home Assistant's Bluetooth stack. That means:
-
-| | ESPHome gateway | This integration |
-| --- | --- | --- |
-| Extra hardware | one ESP32 per lamp | none, any existing adapter or proxy |
-| Firmware to maintain | yes | no |
-| Lamp entity | buttons and sensors | one `light` with brightness, colour temperature and scenes as effects |
-| Scene dropdown with real names | needs the HA package from that repo | built in, updates automatically |
-| Cloud fallback | no | optional |
-| Multiple lamps | one config per lamp | add as many as you like |
-
-If you already run the ESPHome gateway on an ESP32, you can keep using that
-board as a plain [Bluetooth proxy](https://esphome.io/components/bluetooth_proxy.html)
-for this integration.
+Bluetooth LE. If the lamp is out of range and you added your Luke Roberts
+account, the command is sent through the Luke Roberts cloud instead.
 
 ## Features
 
 - **Auto discovery** of lamps through every Bluetooth adapter and proxy
+- **Luke Roberts account**: enter the API key once, Bluetooth lamps are linked
+  to the cloud automatically and lamps out of range are offered as discovered
+  devices, just like the phone app shows all lamps of the account
 - **Light entity**: on/off, brightness, colour temperature (2700 K to 4000 K),
   scenes as effects
 - **Scene select** filled with the scene names stored in the lamp (read with
@@ -81,7 +67,9 @@ for this integration.
   ESPHome proxies need `bluetooth_proxy: active: true`; Shelly Gen2+ devices
   need Bluetooth gateway enabled with active scanning.
 - Optional: a personal API key from <https://cloud.luke-roberts.com/app> for
-  the cloud fallback
+  the Luke Roberts account (cloud fallback)
+- The integration icon is shown from Home Assistant 2026.3 on (older versions
+  just show a placeholder)
 
 ## Installation
 
@@ -109,14 +97,31 @@ restart Home Assistant.
 Lamps in range show up under *Settings → Devices & services → Discovered*.
 Otherwise use *Add integration → Luke Roberts* and choose:
 
-- **Local via Bluetooth**: pick a discovered lamp or type its Bluetooth address
-- **Cloud only**: enter the API key and pick a lamp from your account. Useful
-  for lamps no adapter or proxy can reach.
+- **Lamp via Bluetooth**: pick a discovered lamp or type its Bluetooth address
+- **Luke Roberts account**: sign in once with your personal API key, like the
+  phone app. Home Assistant then
+  - links every Bluetooth lamp to its cloud lamp (matched by serial number,
+    otherwise by identical name), so it gets the cloud fallback without
+    further setup,
+  - offers all other lamps of the account under *Discovered*. Those are
+    controlled through the cloud only.
 
-To add the cloud fallback to a Bluetooth lamp, open the integration's
-**Configure** dialog, enter the API key and link the matching cloud lamp. The
-dialog also sets the connection mode and how long the Bluetooth link is kept
-after the last command (default 30 s, 0 disconnects immediately).
+The account cannot use your app e-mail and password: Luke Roberts only
+documents the personal API key for third party use. Create one at
+<https://cloud.luke-roberts.com/app>.
+
+Each lamp's **Configure** dialog sets the connection mode, how long the
+Bluetooth link is kept after the last command (default 30 s, 0 disconnects
+immediately) and which cloud lamp it is linked to. An API key entered there
+overrides the account for that lamp only.
+
+### How lamps are recognised
+
+A Bluetooth advertisement is treated as a Luke Roberts lamp when it contains
+the control service UUID `44092840-0567-11E6-B862-0002A5D5C51B` or when its
+advertised name starts with `LRBT` (e.g. `LRBTLAMP`) or `Luvo`. Once a lamp is
+set up it is followed by its Bluetooth address, across all adapters and
+proxies.
 
 ## Entities
 
@@ -174,6 +179,31 @@ cards:
       - type: select-options
 ```
 
+## Coming from the ESPHome gateway?
+
+The first approach was a dedicated ESP32 per lamp running ESPHome:
+**[3DJupp/lukeroberts-esphome-lampcontrol](https://github.com/3DJupp/lukeroberts-esphome-lampcontrol)**.
+It works well, but it needs its own firmware, one board per lamp and a pile of
+template buttons and helper automations for scene names.
+
+This integration moves the protocol into Home Assistant itself. Everything the
+ESPHome gateway learned about the lamp (frame layout, the 8 second idle
+disconnect, scene discovery via Query Scene, ping keepalive) is reused here,
+but the radio part is left to Home Assistant's Bluetooth stack. That means:
+
+| | ESPHome gateway | This integration |
+| --- | --- | --- |
+| Extra hardware | one ESP32 per lamp | none, any existing adapter or proxy |
+| Firmware to maintain | yes | no |
+| Lamp entity | buttons and sensors | one `light` with brightness, colour temperature and scenes as effects |
+| Scene dropdown with real names | needs the HA package from that repo | built in, updates automatically |
+| Cloud fallback | no | optional |
+| Multiple lamps | one config per lamp | add as many as you like |
+
+If you already run the ESPHome gateway on an ESP32, you can keep using that
+board as a plain [Bluetooth proxy](https://esphome.io/components/bluetooth_proxy.html)
+for this integration.
+
 ## Protocols
 
 Both documents were provided by Luke Roberts GmbH and are included with their
@@ -214,6 +244,54 @@ version, `BC` bad command, `FC` forbidden (security code set in the app).
 `{"scene": 0..31}`. Commands are queued; there is no confirmation that the lamp
 executed them.
 
+## FAQ
+
+**Can I control a Luke Roberts lamp from Home Assistant without the app?**
+Yes. The lamp is controlled directly over Bluetooth LE. The app is only needed
+to design scenes, which are stored in the lamp and then show up in Home
+Assistant by name.
+
+**Does it work without the Luke Roberts cloud?**
+Yes. Bluetooth control is fully local. The cloud is optional and only used as
+fallback when no adapter or proxy reaches the lamp.
+
+**Do I need an ESP32 per lamp?**
+No. Any Bluetooth adapter on the Home Assistant host or any ESPHome or Shelly
+Bluetooth proxy within range is enough. One proxy can serve several lamps.
+
+**Which lamps are supported?**
+Luke Roberts Model F and Luvo, firmware 1.0.7 or newer for the full command
+set.
+
+**Can I change the uplight colour?**
+Yes, with the `luke_roberts.immediate_light` action (hue, saturation and
+brightness for the uplight, colour temperature and brightness for the
+downlight).
+
+**Does it work with Alexa, Google Home or Assist?**
+The lamp is a normal Home Assistant light entity, so everything that can switch
+and dim Home Assistant lights can control it.
+
+**The Luke Roberts app shows "In Use" or "Waiting".**
+Home Assistant is holding the Bluetooth connection. Lower *Keep Bluetooth
+connection after the last command* in the options, 0 releases it right after
+each command.
+
+**I already have another Luke Roberts integration installed. Can I run both?**
+No. Several community integrations use the same `luke_roberts` domain, and
+Home Assistant only loads one integration per domain. Remove the other one
+(and its folder in `custom_components`) before installing this one.
+
+## Support the project
+
+This integration is a hobby project. If it saves you an ESP32 per lamp or just
+makes your evenings nicer, you can say thanks with a coffee:
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/3djupp)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-3djupp-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/3djupp)
+
+Bug reports with diagnostics and debug logs help just as much.
+
 ## Development
 
 ```bash
@@ -229,15 +307,23 @@ full integration against a simulated lamp.
 
 ## Kurzfassung (Deutsch)
 
-Native Home Assistant Integration für Luke Roberts Lampen. Gesteuert wird lokal
+Native Home Assistant Integration für Luke Roberts Lampen (Model F und Luvo),
+lokal steuern ohne App und ohne Cloud. Gesteuert wird lokal
 per Bluetooth über die vorhandenen Adapter und Bluetooth Proxies (ESPHome,
 Shelly, ...), optional mit der Luke Roberts Cloud als Rückfallebene, also so wie
 die Smartphone App. Der erste Ansatz mit einem eigenen ESP32 pro Lampe liegt in
 [lukeroberts-esphome-lampcontrol](https://github.com/3DJupp/lukeroberts-esphome-lampcontrol);
 ein vorhandener ESP32 kann einfach als Bluetooth Proxy weiterverwendet werden.
 Installation über HACS (Custom Repository), danach erscheinen Lampen in
-Reichweite automatisch unter *Entdeckt*. Den Cloud API Key trägst du bei Bedarf
-in den Optionen der Integration ein.
+Reichweite automatisch unter *Entdeckt*. Erkannt wird eine Lampe an der Service
+UUID `44092840-…` oder am Bluetooth Namen (`LRBT…`, `Luvo…`). Optional fügst
+du einmal dein **Luke Roberts Konto** (persönlicher API Key von
+<https://cloud.luke-roberts.com/app>) hinzu: Bluetooth Lampen werden dann
+automatisch mit der Cloud verknüpft und alle übrigen Lampen des Kontos werden
+angeboten, so wie in der App.
+
+Gefällt dir das Projekt? Über [Ko-fi](https://ko-fi.com/3djupp) oder
+[Buy Me a Coffee](https://buymeacoffee.com/3djupp) kannst du es unterstützen.
 
 **Hinweis:** Das ist eine frühe Version (0.1.x). Fehler und Änderungen bis zur
 1.0 sind wahrscheinlich, Nutzung auf eigene Gefahr. Rückmeldungen gerne als
@@ -256,6 +342,8 @@ Nachfolgefirma.
 - The documents in [`docs/`](docs/) remain the copyright of Luke Roberts GmbH
   or its successor company. The MIT license of this repository covers the
   integration code only, not those documents.
+- The icon in `custom_components/luke_roberts/brand/` is a neutral drawing of
+  a pendant lamp made for this project, not the Luke Roberts logo.
 - The Home Assistant Bluetooth stack and `bleak-retry-connector` make proxy
   based control possible.
 - Earlier ESPHome approach:

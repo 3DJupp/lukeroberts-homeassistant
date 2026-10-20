@@ -5,8 +5,8 @@
       "user": {
         "title": "Luke Roberts Lampe hinzufügen",
         "menu_options": {
-          "pick_device": "Lokal über Bluetooth (Adapter oder Bluetooth Proxy)",
-          "cloud": "Nur Cloud (Luke Roberts API Key)"
+          "pick_device": "Lampe über Bluetooth (Adapter oder Bluetooth Proxy)",
+          "account": "Luke Roberts Konto (alle Lampen, Cloud als Rückfall)"
         }
       },
       "bluetooth_confirm": {
@@ -19,18 +19,15 @@
           "address": "Bluetooth Adresse"
         }
       },
-      "cloud": {
-        "title": "Luke Roberts Cloud",
-        "description": "Einen persönlichen API Key erstellst du unter {cloud_url}",
+      "account": {
+        "title": "Luke Roberts Konto",
+        "description": "Einmal anmelden, wie in der Luke Roberts App. Erstelle unter {cloud_url} einen persönlichen API Key und füge ihn hier ein. Bluetooth Lampen werden danach automatisch mit der Cloud verknüpft, Lampen außerhalb der Bluetooth Reichweite erscheinen unter Entdeckt.",
         "data": {
           "api_key": "API Key"
         }
       },
-      "cloud_lamp": {
-        "title": "Lampe auswählen",
-        "data": {
-          "cloud_lamp_id": "Lampe"
-        }
+      "account_lamp_confirm": {
+        "description": "{name} aus deinem Luke Roberts Konto hinzufügen? Gesteuert wird dann über die Cloud. Ist die Lampe auch per Bluetooth erreichbar, ignoriere das hier und richte sie über Bluetooth ein, sie wird automatisch mit dem Konto verknüpft."
       },
       "reauth_confirm": {
         "title": "Neuer API Key",
@@ -48,14 +45,15 @@
     },
     "abort": {
       "already_configured": "Diese Lampe ist bereits eingerichtet.",
-      "reauth_successful": "Der API Key wurde aktualisiert."
+      "reauth_successful": "Der API Key wurde aktualisiert.",
+      "account_configured": "Das Luke Roberts Konto ist bereits eingerichtet."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Verbindung",
-        "description": "Bluetooth ist lokal und schnell. Mit einem Cloud API Key bleibt die Lampe erreichbar, wenn kein Adapter oder Proxy in Reichweite ist.",
+        "description": "Bluetooth ist lokal und schnell. Mit dem Luke Roberts Konto (oder einem eigenen API Key für diese Lampe) bleibt die Lampe erreichbar, wenn kein Adapter oder Proxy in Reichweite ist.",
         "data": {
           "connection_mode": "Verbindungsart",
           "linger": "Bluetooth Verbindung nach dem letzten Befehl halten",
@@ -63,7 +61,7 @@
         },
         "data_description": {
           "linger": "Solange verbunden, zeigt die Luke Roberts App die Lampe als belegt an. 0 trennt direkt nach jedem Befehl.",
-          "api_key": "Persönlicher API Key von {cloud_url}. Leer lassen für rein lokalen Betrieb."
+          "api_key": "Nur nötig, wenn diese Lampe einen anderen Key als das Luke Roberts Konto nutzen soll. Persönliche API Keys gibt es unter {cloud_url}."
         }
       },
       "cloud_lamp": {

@@ -57,6 +57,11 @@ class LukeRobertsCloud:
         self._session = session
         self._api_key = api_key
 
+    @property
+    def api_key(self) -> str:
+        """The API key used for requests."""
+        return self._api_key
+
     async def _call(
         self, method: str, path: str, payload: dict[str, Any] | None = None
     ) -> Any:

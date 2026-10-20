@@ -13,6 +13,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.luke_roberts.cloud import CloudAuthError, CloudLamp
 from custom_components.luke_roberts.const import (
+    CONF_ACCOUNT,
     CONF_API_KEY,
     CONF_CLOUD_LAMP_ID,
     CONF_CONNECTION_MODE,
@@ -116,14 +117,15 @@ async def test_user_manual_address(hass: HomeAssistant, no_setup) -> None:
     assert result["data"][CONF_ADDRESS] == "AA:BB:CC:DD:EE:01"
 
 
-async def test_cloud_only(hass: HomeAssistant, no_setup) -> None:
-    """Cloud only entry: API key, then lamp."""
+async def test_account(hass: HomeAssistant, no_setup) -> None:
+    """The account is added once with the API key."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"next_step_id": "cloud"}
+        result["flow_id"], {"next_step_id": "account"}
     )
+    assert result["step_id"] == "account"
     with patch(
         "custom_components.luke_roberts.config_flow._fetch_lamps",
         AsyncMock(side_effect=CloudAuthError("401")),
@@ -140,16 +142,87 @@ async def test_cloud_only(hass: HomeAssistant, no_setup) -> None:
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], {CONF_API_KEY: " good "}
         )
-    assert result["step_id"] == "cloud_lamp"
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"] == {CONF_ACCOUNT: True, CONF_API_KEY: "good"}
+    assert result["result"].unique_id == "account"
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
     result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": "account"}
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "account_configured"
+
+
+async def test_account_lamp_discovery(hass: HomeAssistant, no_setup) -> None:
+    """Lamps of the account are offered as cloud lamps without their own key."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
+        data={CONF_CLOUD_LAMP_ID: 12, CONF_NAME: "Esstisch"},
+    )
+    assert result["step_id"] == "account_lamp_confirm"
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["title"] == "Esstisch"
+    assert result["data"] == {CONF_CLOUD_LAMP_ID: 12, CONF_NAME: "Esstisch"}
+    assert result["options"] == {CONF_CONNECTION_MODE: MODE_CLOUD_ONLY}
+    assert result["result"].unique_id == "cloud_12"
+
+
+async def test_account_lamp_discovery_linked(hass: HomeAssistant) -> None:
+    """A cloud lamp already linked to a Bluetooth lamp is not offered."""
+    MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=ADDRESS.lower(),
+        data={CONF_ADDRESS: ADDRESS, CONF_NAME: "Lamp"},
+        options={CONF_CLOUD_LAMP_ID: 12},
+    ).add_to_hass(hass)
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
+        data={CONF_CLOUD_LAMP_ID: 12, CONF_NAME: "Esstisch"},
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+
+
+async def test_options_use_account(hass: HomeAssistant, no_setup) -> None:
+    """With an account, a Bluetooth lamp is linked without its own key."""
+    MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="account",
+        data={CONF_ACCOUNT: True, CONF_API_KEY: "account-key"},
+    ).add_to_hass(hass)
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=ADDRESS.lower(),
+        data={CONF_ADDRESS: ADDRESS, CONF_NAME: "Lamp"},
+        options={CONF_CONNECTION_MODE: MODE_LOCAL_FIRST, CONF_LINGER: 30},
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    with patch(
+        "custom_components.luke_roberts.config_flow._fetch_lamps",
+        AsyncMock(return_value=LAMPS),
+    ) as fetch:
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"], {CONF_CONNECTION_MODE: "cloud_first", CONF_LINGER: 30}
+        )
+    assert fetch.call_args[0][1] == "account-key"
+    assert result["step_id"] == "cloud_lamp"
+    result = await hass.config_entries.options.async_configure(
         result["flow_id"], {CONF_CLOUD_LAMP_ID: "12"}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "Esstisch"
-    assert result["data"][CONF_API_KEY] == "good"
-    assert result["data"][CONF_CLOUD_LAMP_ID] == 12
-    assert result["options"][CONF_CONNECTION_MODE] == MODE_CLOUD_ONLY
-    assert result["result"].unique_id == "cloud_12"
+    assert entry.options == {
+        CONF_CONNECTION_MODE: "cloud_first",
+        CONF_LINGER: 30,
+        CONF_CLOUD_LAMP_ID: 12,
+    }
 
 
 async def test_options_add_cloud(hass: HomeAssistant, no_setup) -> None:

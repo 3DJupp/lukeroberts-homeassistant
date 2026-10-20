@@ -30,8 +30,10 @@ RESPONSE_TIMEOUT: Final = 5.0
 # --- Cloud (Third party REST API v1.0) --------------------------------------
 CLOUD_BASE_URL: Final = "https://cloud.luke-roberts.com/api/v1"
 CLOUD_APP_URL: Final = "https://cloud.luke-roberts.com/app"
+ACCOUNT_UNIQUE_ID: Final = "account"
 
 # --- Config entry keys ------------------------------------------------------
+CONF_ACCOUNT: Final = "account"
 CONF_API_KEY: Final = "api_key"
 CONF_CLOUD_LAMP_ID: Final = "cloud_lamp_id"
 CONF_CONNECTION_MODE: Final = "connection_mode"

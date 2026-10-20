@@ -5,8 +5,8 @@
       "user": {
         "title": "Add a Luke Roberts lamp",
         "menu_options": {
-          "pick_device": "Local via Bluetooth (adapter or Bluetooth proxy)",
-          "cloud": "Cloud only (Luke Roberts API key)"
+          "pick_device": "Lamp via Bluetooth (adapter or Bluetooth proxy)",
+          "account": "Luke Roberts account (all lamps, cloud fallback)"
         }
       },
       "bluetooth_confirm": {
@@ -19,18 +19,15 @@
           "address": "Bluetooth address"
         }
       },
-      "cloud": {
-        "title": "Luke Roberts cloud",
-        "description": "Create a personal API key at {cloud_url}",
+      "account": {
+        "title": "Luke Roberts account",
+        "description": "Sign in once, like the Luke Roberts app. Create a personal API key at {cloud_url} and paste it here. Bluetooth lamps are then linked to the cloud automatically and lamps out of Bluetooth range are offered as discovered devices.",
         "data": {
           "api_key": "API key"
         }
       },
-      "cloud_lamp": {
-        "title": "Select the lamp",
-        "data": {
-          "cloud_lamp_id": "Lamp"
-        }
+      "account_lamp_confirm": {
+        "description": "Add {name} from your Luke Roberts account? It will be controlled through the cloud. If the lamp is also in Bluetooth range, ignore this and set it up via Bluetooth instead; it is linked to the account automatically."
       },
       "reauth_confirm": {
         "title": "New API key",
@@ -48,14 +45,15 @@
     },
     "abort": {
       "already_configured": "This lamp is already configured.",
-      "reauth_successful": "The API key was updated."
+      "reauth_successful": "The API key was updated.",
+      "account_configured": "The Luke Roberts account is already set up."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Connection",
-        "description": "Bluetooth is local and fast. Add a cloud API key to reach the lamp when no adapter or proxy is in range.",
+        "description": "Bluetooth is local and fast. With the Luke Roberts account (or an API key just for this lamp) the lamp stays reachable when no adapter or proxy is in range.",
         "data": {
           "connection_mode": "Connection mode",
           "linger": "Keep Bluetooth connection after the last command",
@@ -63,7 +61,7 @@
         },
         "data_description": {
           "linger": "While connected the Luke Roberts app shows the lamp as in use. 0 disconnects right after each command.",
-          "api_key": "Personal API key from {cloud_url}. Leave empty to stay local only."
+          "api_key": "Only needed when this lamp should use a different key than the Luke Roberts account. Personal API keys are created at {cloud_url}."
         }
       },
       "cloud_lamp": {

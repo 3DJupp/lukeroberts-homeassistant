@@ -33,9 +33,17 @@ from homeassistant.helpers.selector import (
 )
 import voluptuous as vol
 
+from .account import (
+    async_account_api_key,
+    async_account_entry,
+    async_linked_lamp_ids,
+    is_account_entry,
+)
 from .cloud import CloudAuthError, CloudError, CloudLamp, LukeRobertsCloud
 from .const import (
+    ACCOUNT_UNIQUE_ID,
     CLOUD_APP_URL,
+    CONF_ACCOUNT,
     CONF_API_KEY,
     CONF_CLOUD_LAMP_ID,
     CONF_CONNECTION_MODE,
@@ -106,12 +114,19 @@ class LukeRobertsConfigFlow(ConfigFlow, domain=DOMAIN):
         self._discovered: dict[str, BluetoothServiceInfoBleak] = {}
         self._api_key: str | None = None
         self._lamps: list[CloudLamp] = []
+        self._cloud_lamp: dict[str, Any] = {}
 
     @staticmethod
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
         """Return the options flow."""
         return LukeRobertsOptionsFlow()
+
+    @classmethod
+    @callback
+    def async_supports_options_flow(cls, config_entry: ConfigEntry) -> bool:
+        """Only lamps have options, the account is just the API key."""
+        return not is_account_entry(config_entry)
 
     # --- Bluetooth discovery --------------------------------------------------
 
@@ -145,9 +160,9 @@ class LukeRobertsConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Choose between Bluetooth and cloud only."""
+        """Choose between a Bluetooth lamp and the Luke Roberts account."""
         return self.async_show_menu(
-            step_id="user", menu_options=["pick_device", "cloud"]
+            step_id="user", menu_options=["pick_device", "account"]
         )
 
     async def async_step_pick_device(
@@ -204,23 +219,62 @@ class LukeRobertsConfigFlow(ConfigFlow, domain=DOMAIN):
             },
         )
 
-    # --- Cloud only -----------------------------------------------------------
+    # --- Luke Roberts account ---------------------------------------------------
 
-    async def async_step_cloud(
+    async def async_step_account(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Ask for the personal API key."""
+        """Sign in once with the personal API key, like the phone app."""
+        if async_account_entry(self.hass) is not None:
+            return self.async_abort(reason="account_configured")
         errors: dict[str, str] = {}
         if user_input is not None:
             self._api_key = user_input[CONF_API_KEY].strip()
             errors = await self._async_load_lamps()
             if not errors:
-                return await self.async_step_cloud_lamp()
+                await self.async_set_unique_id(ACCOUNT_UNIQUE_ID)
+                self._abort_if_unique_id_configured()
+                return self.async_create_entry(
+                    title="Luke Roberts account",
+                    data={CONF_ACCOUNT: True, CONF_API_KEY: self._api_key},
+                )
         return self.async_show_form(
-            step_id="cloud",
+            step_id="account",
             data_schema=vol.Schema({vol.Required(CONF_API_KEY): API_KEY_SELECTOR}),
             errors=errors,
             description_placeholders=CLOUD_PLACEHOLDERS,
+        )
+
+    async def async_step_integration_discovery(
+        self, discovery_info: dict[str, Any]
+    ) -> ConfigFlowResult:
+        """A lamp of the account is not set up yet."""
+        lamp_id = int(discovery_info[CONF_CLOUD_LAMP_ID])
+        await self.async_set_unique_id(f"cloud_{lamp_id}")
+        self._abort_if_unique_id_configured()
+        if lamp_id in async_linked_lamp_ids(self.hass):
+            return self.async_abort(reason="already_configured")
+        self._cloud_lamp = {
+            CONF_CLOUD_LAMP_ID: lamp_id,
+            CONF_NAME: discovery_info[CONF_NAME],
+        }
+        self.context["title_placeholders"] = {"name": discovery_info[CONF_NAME]}
+        return await self.async_step_account_lamp_confirm()
+
+    async def async_step_account_lamp_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Add a lamp of the account as cloud lamp."""
+        name = self._cloud_lamp[CONF_NAME]
+        if user_input is not None:
+            return self.async_create_entry(
+                title=name,
+                data=self._cloud_lamp,
+                options={CONF_CONNECTION_MODE: MODE_CLOUD_ONLY},
+            )
+        self._set_confirm_only()
+        return self.async_show_form(
+            step_id="account_lamp_confirm", description_placeholders={"name": name}
         )
 
     async def _async_load_lamps(self) -> dict[str, str]:
@@ -234,31 +288,6 @@ class LukeRobertsConfigFlow(ConfigFlow, domain=DOMAIN):
         if not self._lamps:
             return {"base": "no_lamps"}
         return {}
-
-    async def async_step_cloud_lamp(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Pick one of the account's lamps."""
-        if user_input is not None:
-            lamp_id = int(user_input[CONF_CLOUD_LAMP_ID])
-            lamp = next(lamp for lamp in self._lamps if lamp.lamp_id == lamp_id)
-            await self.async_set_unique_id(f"cloud_{lamp_id}")
-            self._abort_if_unique_id_configured()
-            return self.async_create_entry(
-                title=lamp.name,
-                data={
-                    CONF_NAME: lamp.name,
-                    CONF_API_KEY: self._api_key,
-                    CONF_CLOUD_LAMP_ID: lamp_id,
-                },
-                options={CONF_CONNECTION_MODE: MODE_CLOUD_ONLY},
-            )
-        return self.async_show_form(
-            step_id="cloud_lamp",
-            data_schema=vol.Schema(
-                {vol.Required(CONF_CLOUD_LAMP_ID): _lamp_selector(self._lamps)}
-            ),
-        )
 
     # --- Reauth -----------------------------------------------------------------
 
@@ -314,12 +343,14 @@ class LukeRobertsOptionsFlow(OptionsFlow):
 
         if user_input is not None:
             api_key = (user_input.get(CONF_API_KEY) or "").strip()
+            # Without a key of its own the lamp uses the Luke Roberts account.
+            lookup_key = api_key or async_account_api_key(self.hass)
             mode = user_input.get(CONF_CONNECTION_MODE, MODE_CLOUD_ONLY)
-            if mode in (MODE_CLOUD_FIRST, MODE_CLOUD_ONLY) and not api_key:
+            if mode in (MODE_CLOUD_FIRST, MODE_CLOUD_ONLY) and not lookup_key:
                 errors[CONF_API_KEY] = "api_key_required"
-            elif api_key:
+            elif lookup_key:
                 try:
-                    self._lamps = await _fetch_lamps(self.hass, api_key)
+                    self._lamps = await _fetch_lamps(self.hass, lookup_key)
                 except CloudAuthError:
                     errors[CONF_API_KEY] = "invalid_auth"
                 except CloudError:
@@ -334,6 +365,7 @@ class LukeRobertsOptionsFlow(OptionsFlow):
                 }
                 if api_key:
                     self._options[CONF_API_KEY] = api_key
+                if lookup_key:
                     return await self.async_step_cloud_lamp()
                 return self.async_create_entry(data=self._options)
 
