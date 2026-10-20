@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="custom_components/luke_roberts/brand/icon.png" alt="Luke Roberts Home Assistant integration icon: pendant lamp with uplight and downlight" width="128">
+  <img src="https://raw.githubusercontent.com/3DJupp/lukeroberts-homeassistant/main/custom_components/luke_roberts/brand/icon@2x.png" alt="Luke Roberts Home Assistant integration icon: pendant lamp with uplight and downlight" width="128">
 </p>
 
 # Luke Roberts for Home Assistant
@@ -209,9 +209,9 @@ for this integration.
 Both documents were provided by Luke Roberts GmbH and are included with their
 permission. Copyright stays with Luke Roberts GmbH or its successor company.
 
-- [Lamp Control API v1.3](docs/Lamp%20Control%20API%20v1.3.pdf) (Bluetooth LE,
+- [Lamp Control API v1.3](https://raw.githubusercontent.com/3DJupp/lukeroberts-homeassistant/main/docs/Lamp%20Control%20API%20v1.3.pdf) (Bluetooth LE,
   2019-07-09)
-- [Third party REST API v1.0 draft](docs/LR%20Cloud%20REST%20API%20v1.0.pdf)
+- [Third party REST API v1.0 draft](https://raw.githubusercontent.com/3DJupp/lukeroberts-homeassistant/main/docs/LR%20Cloud%20REST%20API%20v1.0.pdf)
   (cloud)
 
 ### Bluetooth LE
@@ -339,7 +339,7 @@ Nachfolgefirma.
 - "Luke Roberts", "Model F", "Luvo", the product names, logos and the lamps
   themselves are trademarks and property of Luke Roberts GmbH or its
   successor company. They are used here only to describe compatibility.
-- The documents in [`docs/`](docs/) remain the copyright of Luke Roberts GmbH
+- The documents in [`docs/`](https://github.com/3DJupp/lukeroberts-homeassistant/tree/main/docs) remain the copyright of Luke Roberts GmbH
   or its successor company. The MIT license of this repository covers the
   integration code only, not those documents.
 - The icon in `custom_components/luke_roberts/brand/` is a neutral drawing of
@@ -351,5 +351,5 @@ Nachfolgefirma.
 
 ## License
 
-Integration code: MIT, see [LICENSE](LICENSE). The API documents in `docs/`
+Integration code: MIT, see [LICENSE](https://github.com/3DJupp/lukeroberts-homeassistant/blob/main/LICENSE). The API documents in `docs/`
 are excluded, see above.
