@@ -1,0 +1,61 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time! Please attach the diagnostics download
+        (*Settings → Devices & services → Luke Roberts → ⋮ → Download diagnostics*).
+        The API key is redacted automatically.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what happened instead?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Integration version
+      placeholder: "0.2.0"
+    validations:
+      required: true
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant version
+      placeholder: "2026.10.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: route
+    attributes:
+      label: How is the lamp connected?
+      multiple: true
+      options:
+        - Bluetooth adapter on the Home Assistant host
+        - ESPHome Bluetooth proxy
+        - Shelly Bluetooth gateway
+        - Luke Roberts cloud
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Lamp model and firmware
+      placeholder: "Model F, firmware 1.3.2"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Debug log
+      description: |
+        Enable debug logging for the integration, reproduce the problem and paste
+        the relevant lines.
+      render: text
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: Drag the diagnostics file here.

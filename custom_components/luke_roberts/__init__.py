@@ -16,6 +16,7 @@ from homeassistant.const import CONF_ADDRESS, CONF_NAME, Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
+    ConfigEntryError,
     ConfigEntryNotReady,
     HomeAssistantError,
 )
@@ -23,6 +24,14 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_interval
 
+from .account import (
+    async_account_api_key,
+    async_account_entry,
+    async_link_lamps,
+    async_loaded_account,
+    async_setup_account,
+    is_account_entry,
+)
 from .ble import BLE_ERRORS, LukeRobertsBle
 from .cloud import CloudAuthError, CloudError, LukeRobertsCloud
 from .const import (
@@ -60,13 +69,25 @@ def _option(entry: ConfigEntry, key: str, default=None):
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: LukeRobertsConfigEntry) -> bool:
-    """Set up a lamp from a config entry."""
+    """Set up a lamp or the account from a config entry."""
+    if is_account_entry(entry):
+        return await async_setup_account(hass, entry)
+
     address: str | None = entry.data.get(CONF_ADDRESS)
     name: str = entry.data.get(CONF_NAME) or entry.title
     default_mode = MODE_LOCAL_FIRST if address else MODE_CLOUD_ONLY
     mode: str = _option(entry, CONF_CONNECTION_MODE, default_mode)
     api_key: str | None = _option(entry, CONF_API_KEY)
     cloud_lamp_id = _option(entry, CONF_CLOUD_LAMP_ID)
+    uses_account = False
+    if not api_key and cloud_lamp_id is not None:
+        api_key = async_account_api_key(hass)
+        uses_account = api_key is not None
+        if not api_key and not address:
+            raise ConfigEntryError(
+                "This lamp was added from the Luke Roberts account; "
+                "add the account again to control it"
+            )
 
     ble: LukeRobertsBle | None = None
     ble_device = None
@@ -102,7 +123,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: LukeRobertsConfigEntry) 
         _setup_bluetooth_tracking(hass, entry, lamp, address.upper(), name)
 
     if lamp.has_cloud:
-        await _setup_cloud_polling(hass, entry, lamp)
+        await _setup_cloud_polling(hass, entry, lamp, uses_account)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
@@ -166,21 +187,36 @@ def _setup_bluetooth_tracking(
 
 
 async def _setup_cloud_polling(
-    hass: HomeAssistant, entry: LukeRobertsConfigEntry, lamp: LukeRobertsLamp
+    hass: HomeAssistant,
+    entry: LukeRobertsConfigEntry,
+    lamp: LukeRobertsLamp,
+    uses_account: bool,
 ) -> None:
     """Poll the (best effort) cloud state endpoint."""
+
+    @callback
+    def _reauth() -> None:
+        # A rejected account key is fixed on the account, not on each lamp.
+        target = async_account_entry(hass) if uses_account else entry
+        if target is not None:
+            target.async_start_reauth(hass)
 
     async def _poll(_now=None) -> None:
         try:
             await lamp.update_from_cloud()
         except CloudAuthError:
-            entry.async_start_reauth(hass)
+            _reauth()
         except CloudError as err:
             _LOGGER.debug("%s: cloud state not available: %s", lamp.name, err)
 
     try:
         await lamp.update_from_cloud()
     except CloudAuthError as err:
+        if uses_account:
+            _reauth()
+            raise ConfigEntryNotReady(
+                "Luke Roberts cloud rejected the account API key"
+            ) from err
         raise ConfigEntryAuthFailed("Luke Roberts cloud rejected the API key") from err
     except CloudError as err:
         _LOGGER.debug("%s: cloud state not available: %s", lamp.name, err)
@@ -218,6 +254,8 @@ async def _async_initial_local_read(
             hw_version=info.get("hardware"),
             serial_number=info.get("serial_number"),
         )
+    if (account := async_loaded_account(hass)) is not None:
+        async_link_lamps(hass, account.lamps)
 
 
 async def _async_update_listener(
@@ -230,6 +268,8 @@ async def async_unload_entry(
     hass: HomeAssistant, entry: LukeRobertsConfigEntry
 ) -> bool:
     """Unload a config entry."""
+    if is_account_entry(entry):
+        return True
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded and entry.runtime_data.ble is not None:
         await entry.runtime_data.ble.disconnect()

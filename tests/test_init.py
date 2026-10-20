@@ -12,6 +12,7 @@ from homeassistant.components.light import (
     DOMAIN as LIGHT_DOMAIN,
 )
 from homeassistant.components.select import ATTR_OPTIONS, DOMAIN as SELECT_DOMAIN
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     CONF_ADDRESS,
@@ -30,6 +31,7 @@ from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClien
 from custom_components.luke_roberts import protocol
 from custom_components.luke_roberts.const import (
     CLOUD_BASE_URL,
+    CONF_ACCOUNT,
     CONF_API_KEY,
     CONF_CLOUD_LAMP_ID,
     CONF_CONNECTION_MODE,
@@ -220,6 +222,107 @@ async def test_cloud_auth_failure_starts_reauth(
     )
     entry.add_to_hass(hass)
     assert not await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    flows = hass.config_entries.flow.async_progress()
+    assert any(flow["context"]["source"] == "reauth" for flow in flows)
+
+
+async def test_account_links_and_discovers(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """The account links the Bluetooth lamp by name and offers the others."""
+    aioclient_mock.get(
+        f"{CLOUD_BASE_URL}/lamps",
+        json=[{"id": 12, "name": "Esstisch"}, {"id": 13, "name": "Flur"}],
+    )
+    aioclient_mock.get(f"{CLOUD_BASE_URL}/lamps/12/state", json={})
+    client = FakeLampClient()
+    lamp_entry = await _setup_ble(hass, client)
+    assert lamp_entry.runtime_data.cloud is None
+
+    account = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="account",
+        data={CONF_ACCOUNT: True, CONF_API_KEY: "account-key"},
+    )
+    account.add_to_hass(hass)
+    with (
+        patch(
+            "homeassistant.components.bluetooth.async_ble_device_from_address",
+            return_value=service_info().device,
+        ),
+        patch(
+            "custom_components.luke_roberts.ble.establish_connection",
+            AsyncMock(return_value=client),
+        ),
+    ):
+        assert await hass.config_entries.async_setup(account.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+    assert lamp_entry.options[CONF_CLOUD_LAMP_ID] == 12
+    assert lamp_entry.runtime_data.has_cloud
+    assert lamp_entry.runtime_data.cloud.api_key == "account-key"
+
+    flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+    assert [flow["context"]["unique_id"] for flow in flows] == ["cloud_13"]
+
+
+async def test_account_lamp_uses_account_key(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """A lamp added from the account sends commands with the account key."""
+    aioclient_mock.get(f"{CLOUD_BASE_URL}/lamps/12/state", json={"on": True})
+    aioclient_mock.put(f"{CLOUD_BASE_URL}/lamps/12/command", json={})
+    MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="account",
+        data={CONF_ACCOUNT: True, CONF_API_KEY: "account-key"},
+    ).add_to_hass(hass)
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Esstisch",
+        unique_id="cloud_12",
+        data={CONF_NAME: "Esstisch", CONF_CLOUD_LAMP_ID: 12},
+        options={CONF_CONNECTION_MODE: MODE_CLOUD_ONLY},
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    await hass.services.async_call(
+        LIGHT_DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: LIGHT}, blocking=True
+    )
+    put = next(call for call in aioclient_mock.mock_calls if call[0] == "PUT")
+    assert put[2] == {"power": "OFF"}
+    assert put[3]["Authorization"] == "Bearer account-key"
+
+
+async def test_account_lamp_without_account(hass: HomeAssistant) -> None:
+    """A lamp from a removed account fails setup with a clear error."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Esstisch",
+        unique_id="cloud_12",
+        data={CONF_NAME: "Esstisch", CONF_CLOUD_LAMP_ID: 12},
+        options={CONF_CONNECTION_MODE: MODE_CLOUD_ONLY},
+    )
+    entry.add_to_hass(hass)
+    assert not await hass.config_entries.async_setup(entry.entry_id)
+    assert entry.state is ConfigEntryState.SETUP_ERROR
+
+
+async def test_account_auth_failure(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """A rejected account key asks for a new one on the account."""
+    aioclient_mock.get(f"{CLOUD_BASE_URL}/lamps", status=401)
+    account = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="account",
+        data={CONF_ACCOUNT: True, CONF_API_KEY: "account-key"},
+    )
+    account.add_to_hass(hass)
+    assert not await hass.config_entries.async_setup(account.entry_id)
     await hass.async_block_till_done()
     flows = hass.config_entries.flow.async_progress()
     assert any(flow["context"]["source"] == "reauth" for flow in flows)
