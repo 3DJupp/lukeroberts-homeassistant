@@ -10,6 +10,9 @@ MANUFACTURER: Final = "Luke Roberts"
 # --- Bluetooth LE (Lamp Control API v1.3) -----------------------------------
 SERVICE_UUID: Final = "44092840-0567-11e6-b862-0002a5d5c51b"
 API_CHAR_UUID: Final = "44092842-0567-11e6-b862-0002a5d5c51b"
+# Scene records, written like the Luke Roberts app 2.4.0 does. The lamp answers
+# on the API characteristic.
+SCENE_CHAR_UUID: Final = "44092843-0567-11e6-b862-0002a5d5c51b"
 
 # Device Information Service (0x180A)
 DIS_MANUFACTURER_UUID: Final = "00002a29-0000-1000-8000-00805f9b34fb"
@@ -32,8 +35,12 @@ CLOUD_BASE_URL: Final = "https://cloud.luke-roberts.com/api/v1"
 CLOUD_APP_URL: Final = "https://cloud.luke-roberts.com/app"
 ACCOUNT_UNIQUE_ID: Final = "account"
 
+# --- Firmware lookup (endpoint used by the Luke Roberts app 2.4.0) ----------
+FIRMWARE_BASE_URL: Final = "https://luke-roberts-firmware.firebaseapp.com/api/v1"
+
 # --- Config entry keys ------------------------------------------------------
 CONF_ACCOUNT: Final = "account"
+CONF_FIRMWARE_KEY: Final = "firmware_key"
 CONF_API_KEY: Final = "api_key"
 CONF_CLOUD_LAMP_ID: Final = "cloud_lamp_id"
 CONF_CONNECTION_MODE: Final = "connection_mode"
@@ -64,3 +71,5 @@ CLOUD_MAX_SCENE_ID: Final = 31
 # --- Services ----------------------------------------------------------------
 SERVICE_IMMEDIATE_LIGHT: Final = "immediate_light"
 SERVICE_REFRESH_SCENES: Final = "refresh_scenes"
+SERVICE_SAVE_SCENE: Final = "save_scene"
+SERVICE_DELETE_SCENE: Final = "delete_scene"

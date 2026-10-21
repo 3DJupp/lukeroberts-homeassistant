@@ -94,3 +94,57 @@ def test_empty_response() -> None:
     """An empty response is an error."""
     with pytest.raises(protocol.LampError):
         protocol.check_status(b"")
+
+
+def test_static_scene_record() -> None:
+    """Scene record layout of the Luke Roberts app 2.4.0."""
+    record = protocol.static_scene(
+        protocol.SCENE_NEW,
+        "Abend",
+        Uplight(saturation=0, hue=3000, brightness=0x80),
+        Downlight(kelvin=2900, brightness=0xFF),
+    )
+    assert len(record) == 178
+    assert record[:8].hex(" ") == "01 fe 00 01 00 00 00 00"
+    assert record[8:10].hex(" ") == "0b 54"
+    assert record[10:14].hex(" ") == "00 0b b8 80"  # white segment, Kelvin
+    assert record[10:74] == record[10:14] * 16
+    assert record[74:158] == b"\xff" * 84
+    assert record[158:] == b"Abend" + b"\x00" * 15
+
+
+def test_static_scene_colour_and_lists() -> None:
+    """Colour segments carry hue, per spot downlight keeps 2700 K."""
+    segments = [Uplight(saturation=255, hue=0x8000, brightness=10)] * 16
+    record = protocol.static_scene(3, "x" * 30, segments, list(range(84)))
+    assert record[1] == 3
+    assert record[8:10].hex(" ") == "0a 8c"
+    assert record[10:14].hex(" ") == "ff 80 00 0a"
+    assert record[74:158] == bytes(range(84))
+    assert record[158:] == b"x" * 20
+    with pytest.raises(ValueError):
+        protocol.static_scene(3, "x", segments[:2], list(range(84)))
+
+
+def test_scene_name_does_not_split_characters() -> None:
+    """A multi-byte character at the limit is dropped, not cut."""
+    record = protocol.static_scene(
+        3, "a" * 19 + "ü", Uplight(0, 2700, 0), Downlight(2700, 0)
+    )
+    assert record[158:] == b"a" * 19 + b"\x00"
+
+
+def test_delete_scene_record() -> None:
+    """Deleting is a header with type 0."""
+    assert protocol.delete_scene(4).hex(" ") == "01 04 00 00 00 00 00 00"
+
+
+def test_parse_scene_write() -> None:
+    """The lamp answers with sync version, scene id and sort index."""
+    result = protocol.parse_scene_write(bytes.fromhex("00 00 00 00 07 05 02"))
+    assert result == protocol.SceneWrite(sync_version=7, scene_id=5, sort_index=2)
+    assert protocol.parse_scene_write(b"\x00").scene_id is None
+    with pytest.raises(protocol.LampError):
+        protocol.parse_scene_write(b"\x85")
+    with pytest.raises(protocol.LampForbiddenError):
+        protocol.parse_scene_write(b"\xfd")

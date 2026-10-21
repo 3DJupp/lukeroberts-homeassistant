@@ -47,6 +47,7 @@ from .const import (
     CONF_API_KEY,
     CONF_CLOUD_LAMP_ID,
     CONF_CONNECTION_MODE,
+    CONF_FIRMWARE_KEY,
     CONF_LINGER,
     DEFAULT_LINGER,
     DOMAIN,
@@ -365,6 +366,8 @@ class LukeRobertsOptionsFlow(OptionsFlow):
                 }
                 if api_key:
                     self._options[CONF_API_KEY] = api_key
+                if firmware_key := (user_input.get(CONF_FIRMWARE_KEY) or "").strip():
+                    self._options[CONF_FIRMWARE_KEY] = firmware_key
                 if lookup_key:
                     return await self.async_step_cloud_lamp()
                 return self.async_create_entry(data=self._options)
@@ -407,6 +410,13 @@ class LukeRobertsOptionsFlow(OptionsFlow):
                 description={"suggested_value": self._current(CONF_API_KEY)},
             )
         ] = API_KEY_SELECTOR
+        if has_ble:
+            schema[
+                vol.Optional(
+                    CONF_FIRMWARE_KEY,
+                    description={"suggested_value": self._current(CONF_FIRMWARE_KEY)},
+                )
+            ] = API_KEY_SELECTOR
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(schema),

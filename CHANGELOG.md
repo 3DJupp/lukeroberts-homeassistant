@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.0
+
+- **Scenes from Home Assistant** (experimental): `luke_roberts.save_scene`
+  creates or overwrites a scene in the lamp, `luke_roberts.delete_scene`
+  removes one. Record format from the Luke Roberts app 2.4.0.
+- **Firmware entity**: installed firmware, and with a firmware check key in
+  the lamp options the newest version and release notes from the Luke Roberts
+  firmware server
+- Device page shows the firmware version (2A28) instead of the bootloader
+  revision (2A26)
+- Diagnostics list what the Bluetooth adapters and proxies last saw of the
+  lamp; setup logs a hint when no connectable scanner sees it (for example
+  while an ESPHome gateway or the phone app holds the connection)
+- Status `0xFD` (locked) is treated like a security code, `0x85` reports a
+  full scene memory
+
 ## 0.2.0
 
 - **Luke Roberts account**: add the API key once. Bluetooth lamps are linked

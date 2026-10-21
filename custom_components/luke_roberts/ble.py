@@ -155,6 +155,14 @@ class LukeRobertsBle:
         self._schedule_keepalive()
         return response
 
+    async def write_record(self, char_uuid: str, record: bytes) -> bytes:
+        """Write to another characteristic, the answer comes on the API one."""
+        async with self._lock:
+            response = await self._request_locked(record, char_uuid)
+        self._last_command = time.monotonic()
+        self._schedule_keepalive()
+        return response
+
     async def request_many(self, frames: list[bytes]) -> list[bytes]:
         """Send several commands back to back over one connection."""
         responses: list[bytes] = []
@@ -165,13 +173,15 @@ class LukeRobertsBle:
         self._schedule_keepalive()
         return responses
 
-    async def _request_locked(self, frame: bytes) -> bytes:
+    async def _request_locked(
+        self, frame: bytes, char_uuid: str = API_CHAR_UUID
+    ) -> bytes:
         client = await self._ensure_connected()
         loop = asyncio.get_running_loop()
         self._response = loop.create_future()
-        _LOGGER.debug("%s: -> %s", self._name, frame.hex(" "))
+        _LOGGER.debug("%s: -> %s %s", self._name, char_uuid[4:8], frame.hex(" "))
         try:
-            await client.write_gatt_char(API_CHAR_UUID, frame, response=True)
+            await client.write_gatt_char(char_uuid, frame, response=True)
             async with asyncio.timeout(RESPONSE_TIMEOUT):
                 return await self._response
         finally:
