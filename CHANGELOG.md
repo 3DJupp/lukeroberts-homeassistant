@@ -9,7 +9,6 @@
   does not have to be reachable over Bluetooth first.
 - Failed firmware checks are logged as a warning instead of only at debug
   level.
-- Manifest declares the category `lighting.bulbs_lamps` (hassfest warning).
 - Lamp details (model, firmware, scenes) are read again when the first
   attempt timed out, as soon as a connection succeeds, and when the lamp shows
   up again after a gap (for example a firmware update with the app). Before,
