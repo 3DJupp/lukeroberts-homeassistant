@@ -15,6 +15,9 @@
       "connectable": true
     }
   ],
+  "categories": [
+    "lighting.bulbs_lamps"
+  ],
   "codeowners": [
     "@3DJupp"
   ],
