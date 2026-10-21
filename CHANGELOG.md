@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0
+## 0.2.1
 
 - **Scenes from Home Assistant** (experimental): `luke_roberts.save_scene`
   creates or overwrites a scene in the lamp, `luke_roberts.delete_scene`
