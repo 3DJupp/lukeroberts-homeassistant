@@ -23,6 +23,7 @@ def test_parse_bootloader() -> None:
 def test_firmware_query() -> None:
     """Device information maps to the parameters the app sends."""
     assert firmware_query({"model": "LRF02"}) is None
+    assert firmware_query({"software": "1.2.2"})["model"] == ""
     assert firmware_query(
         {
             "model": "LRF02",
@@ -54,5 +55,8 @@ def test_parse_release() -> None:
             ],
         }
     ) == FirmwareRelease("1.4.0", "https://example.invalid/fw.zip", "new")
+    assert parse_release({}) is None  # up to date
     with pytest.raises(FirmwareError):
         parse_release({"error": "nope"})
+    with pytest.raises(FirmwareError):
+        parse_release([])

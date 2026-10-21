@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.2
+
+- Firmware check: a lamp that is up to date showed no newest version, because
+  the firmware server answers `{}` then. It now shows "up to date".
+- Firmware check runs right after start and every 6 hours (was 12). After a
+  restart it uses the firmware version stored on the device, so the lamp
+  does not have to be reachable over Bluetooth first.
+- Failed firmware checks are logged as a warning instead of only at debug
+  level.
+
 ## 0.2.1
 
 - **Scenes from Home Assistant** (experimental): `luke_roberts.save_scene`

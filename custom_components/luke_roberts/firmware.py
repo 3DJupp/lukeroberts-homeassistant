@@ -2,7 +2,8 @@
 
 The app asks ``GET /firmware/latest`` with the Device Information of the lamp
 and an ``Api-Key`` header. The answer names the newest version, a download
-link to a Nordic DFU package and release notes. Installing is left to the
+link to the firmware file and release notes, or is ``{}`` when the lamp is up
+to date. Installing is left to the
 app: a failed update can leave the lamp in its bootloader.
 """
 
@@ -48,15 +49,14 @@ def parse_bootloader(revision: str | None) -> tuple[int, int]:
 
 
 def firmware_query(device_info: dict[str, str]) -> dict[str, str] | None:
-    """Query parameters for a lamp, None while its details are unknown."""
-    model = device_info.get("model")
+    """Query parameters for a lamp, None while its firmware is unknown."""
     firmware = device_info.get("software")
-    if not model or not firmware:
+    if not firmware:
         return None
     bootloader, homekit = parse_bootloader(device_info.get("firmware"))
     return {
         "app": "Android",
-        "model": model,
+        "model": device_info.get("model", ""),
         "firmware": firmware,
         "revision": device_info.get("hardware", ""),
         "serial": device_info.get("serial_number", ""),
@@ -65,9 +65,16 @@ def firmware_query(device_info: dict[str, str]) -> dict[str, str] | None:
     }
 
 
-def parse_release(data: Any) -> FirmwareRelease:
-    """Decode ``{version, file, history: [{version, releaseNotes}]}``."""
-    if not isinstance(data, dict) or not data.get("version"):
+def parse_release(data: Any) -> FirmwareRelease | None:
+    """Decode ``{version, file, history: [{version, releaseNotes}]}``.
+
+    None means the server has nothing newer for this lamp (answer ``{}``).
+    """
+    if not isinstance(data, dict):
+        raise FirmwareError(f"Unexpected answer: {str(data)[:200]}")
+    if not data:
+        return None
+    if not data.get("version"):
         raise FirmwareError(f"Unexpected answer: {str(data)[:200]}")
     version = str(data["version"])
     notes = None
@@ -84,8 +91,8 @@ def parse_release(data: Any) -> FirmwareRelease:
 
 async def async_latest_firmware(
     session: aiohttp.ClientSession, api_key: str, query: dict[str, str]
-) -> FirmwareRelease:
-    """Ask the firmware server for the newest version for this lamp."""
+) -> FirmwareRelease | None:
+    """Ask the firmware server for a newer version, None if up to date."""
     try:
         async with session.get(
             f"{FIRMWARE_BASE_URL}/firmware/latest",
