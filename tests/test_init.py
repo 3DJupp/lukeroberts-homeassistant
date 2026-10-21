@@ -289,6 +289,154 @@ async def test_firmware_entity(
     assert headers["Api-Key"] == "secret"
 
 
+async def test_firmware_entity_up_to_date(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """The server answers {} when nothing newer exists."""
+    aioclient_mock.get(f"{FIRMWARE_BASE_URL}/firmware/latest", json={})
+    await _setup_ble(hass, FakeLampClient(), **{CONF_FIRMWARE_KEY: "secret"})
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    state = hass.states.get("update.esstisch_firmware")
+    assert state.state == STATE_OFF
+    assert state.attributes["latest_version"] == "1.3.2"
+
+
+async def test_firmware_entity_from_registry(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """After a restart without Bluetooth the registry version is checked."""
+    aioclient_mock.get(
+        f"{FIRMWARE_BASE_URL}/firmware/latest",
+        json={"version": "1.4.0", "file": "https://example.invalid/fw.zip"},
+    )
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Esstisch",
+        unique_id=ADDRESS.lower(),
+        data={CONF_ADDRESS: ADDRESS, CONF_NAME: "Esstisch"},
+        options={CONF_CONNECTION_MODE: MODE_LOCAL_FIRST, CONF_FIRMWARE_KEY: "k"},
+    )
+    entry.add_to_hass(hass)
+    dr.async_get(hass).async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, entry.unique_id)},
+        sw_version="1.2.2",
+        model="LRF02",
+    )
+    with patch(
+        "homeassistant.components.bluetooth.async_ble_device_from_address",
+        return_value=None,
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+    state = hass.states.get("update.esstisch_firmware")
+    assert state.attributes["installed_version"] == "1.2.2"
+    assert state.attributes["latest_version"] == "1.4.0"
+    assert state.state == STATE_ON
+    _method, url, _data, _headers = aioclient_mock.mock_calls[0]
+    assert url.query["firmware"] == "1.2.2"
+    assert url.query["model"] == "LRF02"
+
+
+async def test_details_read_on_next_connection(hass: HomeAssistant) -> None:
+    """A timeout on the first read is caught up with the next connection."""
+    client = FakeLampClient()
+    attempts = []
+
+    def _connect(*_args, **_kwargs):
+        attempts.append(1)
+        if len(attempts) == 1:
+            raise TimeoutError
+        client.is_connected = True
+        return client
+
+    connect = AsyncMock(side_effect=_connect)
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Esstisch",
+        unique_id=ADDRESS.lower(),
+        data={CONF_ADDRESS: ADDRESS, CONF_NAME: "Esstisch"},
+        options={CONF_CONNECTION_MODE: MODE_LOCAL_FIRST, CONF_LINGER: 0},
+    )
+    entry.add_to_hass(hass)
+    with (
+        patch(
+            "homeassistant.components.bluetooth.async_ble_device_from_address",
+            return_value=service_info().device,
+        ),
+        patch("custom_components.luke_roberts.ble.establish_connection", connect),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+        device = dr.async_get(hass).async_get_device(
+            identifiers={(DOMAIN, entry.unique_id)}
+        )
+        assert device.sw_version is None
+        assert entry.runtime_data.details_read_at is None
+
+        await hass.services.async_call(
+            LIGHT_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: LIGHT}, blocking=True
+        )
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+    device = dr.async_get(hass).async_get_device(
+        identifiers={(DOMAIN, entry.unique_id)}
+    )
+    assert device.sw_version == "1.3.2"
+    assert entry.runtime_data.details_read_at is not None
+    assert hass.states.get(LIGHT).attributes[ATTR_EFFECT_LIST] == [
+        "Default",
+        "Lesen",
+        "Gemütlich",
+    ]
+
+
+async def test_details_read_again_when_lamp_returns(hass: HomeAssistant) -> None:
+    """After a gap (e.g. an app firmware update) the version is read again."""
+    client = FakeLampClient()
+    callbacks = []
+    with patch(
+        "homeassistant.components.bluetooth.async_register_callback",
+        side_effect=lambda _hass, cb, _matcher, _mode: (
+            callbacks.append(cb) or (lambda: None)
+        ),
+    ):
+        entry = await _setup_ble(hass, client)
+    lamp = entry.runtime_data
+    seen = callbacks[0]
+
+    client.software = b"1.4.0\x00"
+    with patch(
+        "custom_components.luke_roberts.ble.establish_connection",
+        AsyncMock(return_value=client),
+    ):
+        # Gone and back within the re-read interval: nothing is read.
+        lamp.ble_present = False
+        seen(service_info(), None)
+        await hass.async_block_till_done(wait_background_tasks=True)
+        device = dr.async_get(hass).async_get_device(
+            identifiers={(DOMAIN, entry.unique_id)}
+        )
+        assert device.sw_version == "1.3.2"
+
+        # Later: the details are read again and the new firmware shows up.
+        lamp.details_read_at -= 3600
+        lamp.ble_present = False
+        seen(service_info(), None)
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+    device = dr.async_get(hass).async_get_device(
+        identifiers={(DOMAIN, entry.unique_id)}
+    )
+    assert device.sw_version == "1.4.0"
+    assert (
+        hass.states.get("update.esstisch_firmware").attributes["installed_version"]
+        == "1.4.0"
+    )
+
+
 async def test_firmware_entity_without_key(hass: HomeAssistant) -> None:
     """Without a key only the installed version is shown."""
     await _setup_ble(hass, FakeLampClient())

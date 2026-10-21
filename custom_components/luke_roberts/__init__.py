@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 import logging
+import time
 
 from homeassistant.components import bluetooth
 from homeassistant.config_entries import ConfigEntry
@@ -58,6 +59,8 @@ PLATFORMS: list[Platform] = [
 ]
 
 CLOUD_POLL_INTERVAL = timedelta(seconds=60)
+# Re-read the lamp details after it was gone at most this often (seconds).
+DETAILS_REREAD_INTERVAL = 600
 
 type LukeRobertsConfigEntry = ConfigEntry[LukeRobertsLamp]
 
@@ -138,12 +141,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: LukeRobertsConfigEntry) 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
-    if lamp.has_local and lamp.ble_present:
-        entry.async_create_background_task(
-            hass,
-            _async_initial_local_read(hass, entry),
-            f"{entry.title} initial read",
-        )
+    if lamp.ble is not None:
+        _watch_connection(hass, entry, lamp.ble)
+    if lamp.ble_present:
+        _async_schedule_details_read(hass, entry)
     return True
 
 
@@ -164,15 +165,15 @@ def _setup_bluetooth_tracking(
         if lamp.ble is None:
             linger = float(_option(entry, CONF_LINGER, DEFAULT_LINGER))
             lamp.ble = LukeRobertsBle(service_info.device, name, linger)
-            entry.async_create_background_task(
-                hass,
-                _async_initial_local_read(hass, entry),
-                f"{entry.title} initial read",
-            )
+            _watch_connection(hass, entry, lamp.ble)
+            _async_schedule_details_read(hass, entry)
         else:
             lamp.ble.set_ble_device(service_info.device)
         if not lamp.ble_present:
             lamp.ble_present = True
+            # Back after a gap, e.g. a firmware update with the app: read the
+            # details again so the firmware version is current.
+            _async_schedule_details_read(hass, entry, again=True)
             lamp.notify()
 
     @callback
@@ -234,26 +235,81 @@ async def _setup_cloud_polling(
     entry.async_on_unload(async_track_time_interval(hass, _poll, CLOUD_POLL_INTERVAL))
 
 
-async def _async_initial_local_read(
+@callback
+def _watch_connection(
+    hass: HomeAssistant, entry: LukeRobertsConfigEntry, ble: LukeRobertsBle
+) -> None:
+    """Catch up on the lamp details as soon as a connection succeeds."""
+
+    @callback
+    def _connected(connected: bool) -> None:
+        if connected:
+            _async_schedule_details_read(hass, entry)
+
+    entry.async_on_unload(ble.add_connection_listener(_connected))
+
+
+@callback
+def _async_schedule_details_read(
+    hass: HomeAssistant, entry: LukeRobertsConfigEntry, again: bool = False
+) -> None:
+    """Read the lamp details unless that is already done or under way.
+
+    ``again`` reads once more after a successful read, at most every
+    DETAILS_REREAD_INTERVAL so a flapping proxy does not keep the lamp busy.
+    """
+    lamp = entry.runtime_data
+    if not lamp.has_local or lamp.details_reading:
+        return
+    if lamp.details_read_at is not None and (
+        not again or time.monotonic() - lamp.details_read_at < DETAILS_REREAD_INTERVAL
+    ):
+        return
+    lamp.details_reading = True
+    entry.async_create_background_task(
+        hass, _async_read_details(hass, entry), f"{entry.title} read details"
+    )
+
+
+async def _async_read_details(
     hass: HomeAssistant, entry: LukeRobertsConfigEntry
 ) -> None:
-    """Read API version, device information and scene names once."""
+    """Read API version, device information and scene names."""
     lamp = entry.runtime_data
-    if not lamp.has_local:
-        return
     try:
-        await lamp.ping()
-        info = await lamp.read_device_info()
-        await lamp.refresh_scenes()
-    except (HomeAssistantError, *BLE_ERRORS) as err:
-        _LOGGER.info(
-            "%s: could not read lamp details over Bluetooth yet (%s); "
-            "use the 'Refresh scenes' button once the lamp is reachable",
-            lamp.name,
-            err,
-        )
-        return
+        try:
+            await lamp.ping()
+            info = await lamp.read_device_info()
+        except (HomeAssistantError, *BLE_ERRORS) as err:
+            _LOGGER.info(
+                "%s: could not read lamp details over Bluetooth yet (%s); "
+                "trying again with the next connection",
+                lamp.name,
+                err,
+            )
+            return
+        lamp.details_read_at = time.monotonic()
+        _store_device_info(hass, entry, info)
+        lamp.notify()
+        try:
+            await lamp.refresh_scenes()
+        except (HomeAssistantError, *BLE_ERRORS) as err:
+            _LOGGER.info(
+                "%s: could not read the scenes (%s); use the 'Refresh scenes' "
+                "button once the lamp is reachable",
+                lamp.name,
+                err,
+            )
+    finally:
+        lamp.details_reading = False
+    if (account := async_loaded_account(hass)) is not None:
+        async_link_lamps(hass, account.lamps)
 
+
+@callback
+def _store_device_info(
+    hass: HomeAssistant, entry: LukeRobertsConfigEntry, info: dict[str, str]
+) -> None:
     registry = dr.async_get(hass)
     device = registry.async_get_device(identifiers={(DOMAIN, entry.unique_id)})
     if device is not None:
@@ -265,8 +321,6 @@ async def _async_initial_local_read(
             hw_version=info.get("hardware"),
             serial_number=info.get("serial_number"),
         )
-    if (account := async_loaded_account(hass)) is not None:
-        async_link_lamps(hass, account.lamps)
 
 
 async def _async_update_listener(

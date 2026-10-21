@@ -197,7 +197,7 @@ Scenes 0 (Off) and the default scene cannot be changed.
 `update.<lamp>_firmware` shows the firmware read from the lamp. To also see
 whether a newer version exists, enter a firmware check key in the lamp's
 **Configure** dialog. The integration then asks the Luke Roberts firmware
-server every 12 hours, the same way the app does. The key is the `Api-Key`
+server every 6 hours, the same way the app does. The key is the `Api-Key`
 the Luke Roberts app uses for that server; it is not published here. Updates
 are installed with the Luke Roberts app.
 

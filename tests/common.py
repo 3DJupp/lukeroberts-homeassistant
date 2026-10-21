@@ -57,6 +57,7 @@ class FakeLampClient:
             scene_id: name for scene_id, (_next, name) in self.SCENES.items()
         }
         self.sync_version = 1
+        self.software = b"1.3.2\x00"
         self._callback: Callable[[object, bytearray], None] | None = None
 
     async def start_notify(self, _uuid: str, callback) -> None:
@@ -100,7 +101,7 @@ class FakeLampClient:
         return {
             "00002a24-0000-1000-8000-00805f9b34fb": b"Model F\x00",
             "00002a26-0000-1000-8000-00805f9b34fb": b"21.3",
-            "00002a28-0000-1000-8000-00805f9b34fb": b"1.3.2\x00",
+            "00002a28-0000-1000-8000-00805f9b34fb": self.software,
         }.get(uuid, b"")
 
     async def disconnect(self) -> None:
