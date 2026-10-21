@@ -54,6 +54,7 @@ PLATFORMS: list[Platform] = [
     Platform.LIGHT,
     Platform.SELECT,
     Platform.SENSOR,
+    Platform.UPDATE,
 ]
 
 CLOUD_POLL_INTERVAL = timedelta(seconds=60)
@@ -95,6 +96,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: LukeRobertsConfigEntry) 
         ble_device = bluetooth.async_ble_device_from_address(
             hass, address.upper(), connectable=True
         )
+        if ble_device is None:
+            _LOGGER.info(
+                "%s: %s is not seen by any connectable Bluetooth adapter or "
+                "proxy. A lamp that is connected to another central (phone "
+                "app, an ESP32 running the ESPHome lamp gateway) does not "
+                "advertise and accepts no second connection",
+                name,
+                address,
+            )
         if ble_device is None and mode == MODE_LOCAL_ONLY:
             raise ConfigEntryNotReady(
                 f"Could not find Luke Roberts lamp {address} via any "
@@ -250,7 +260,8 @@ async def _async_initial_local_read(
         registry.async_update_device(
             device.id,
             model=info.get("model") or device.model,
-            sw_version=info.get("firmware") or info.get("software"),
+            # The app treats 2A28 as firmware and 2A26 as bootloader revision.
+            sw_version=info.get("software") or info.get("firmware"),
             hw_version=info.get("hardware"),
             serial_number=info.get("serial_number"),
         )

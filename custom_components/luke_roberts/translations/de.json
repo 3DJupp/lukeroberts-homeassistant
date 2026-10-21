@@ -57,11 +57,13 @@
         "data": {
           "connection_mode": "Verbindungsart",
           "linger": "Bluetooth Verbindung nach dem letzten Befehl halten",
-          "api_key": "Cloud API Key (optional)"
+          "api_key": "Cloud API Key (optional)",
+          "firmware_key": "Schlüssel für Firmwareprüfung (optional)"
         },
         "data_description": {
           "linger": "Solange verbunden, zeigt die Luke Roberts App die Lampe als belegt an. 0 trennt direkt nach jedem Befehl.",
-          "api_key": "Nur nötig, wenn diese Lampe einen anderen Key als das Luke Roberts Konto nutzen soll. Persönliche API Keys gibt es unter {cloud_url}."
+          "api_key": "Nur nötig, wenn diese Lampe einen anderen Key als das Luke Roberts Konto nutzen soll. Persönliche API Keys gibt es unter {cloud_url}.",
+          "firmware_key": "Api-Key für den Luke Roberts Firmware Server. Damit zeigt die Firmware Entität, ob eine neuere Version verfügbar ist."
         }
       },
       "cloud_lamp": {
@@ -128,6 +130,11 @@
       "api_version": {
         "name": "API Version"
       }
+    },
+    "update": {
+      "firmware": {
+        "name": "Firmware"
+      }
     }
   },
   "services": {
@@ -158,6 +165,54 @@
         "duration": {
           "name": "Dauer",
           "description": "Nach dieser Zeit zur Szene zurückkehren (max. 65 s). 0 behält die Änderung."
+        }
+      }
+    },
+    "save_scene": {
+      "name": "Szene speichern",
+      "description": "Speichert eine Szene in der Lampe (nur Bluetooth). Ohne 'Szene überschreiben' wird eine neue Szene angelegt, sonst diese ersetzt. Uplight und Downlight gelten gleichmäßig für alle Segmente.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "Name der Szene, höchstens 20 Bytes."
+        },
+        "scene": {
+          "name": "Szene überschreiben",
+          "description": "Name oder ID einer vorhandenen Szene. Leer lassen für eine neue Szene."
+        },
+        "uplight_hs_color": {
+          "name": "Uplight Farbton/Sättigung",
+          "description": "[Farbton 0-360, Sättigung 0-100] für das indirekte Licht."
+        },
+        "uplight_kelvin": {
+          "name": "Uplight Farbtemperatur",
+          "description": "Weißes Uplight statt einer Farbe."
+        },
+        "uplight_brightness": {
+          "name": "Uplight Helligkeit",
+          "description": "Helligkeit des Uplights. Ohne Farbe bleibt das Uplight aus, solange sie nicht gesetzt ist."
+        },
+        "downlight_kelvin": {
+          "name": "Downlight Farbtemperatur",
+          "description": "Farbtemperatur des direkten Lichts."
+        },
+        "downlight_brightness": {
+          "name": "Downlight Helligkeit",
+          "description": "Helligkeit des direkten Lichts."
+        },
+        "activate": {
+          "name": "Aktivieren",
+          "description": "Szene nach dem Speichern auswählen."
+        }
+      }
+    },
+    "delete_scene": {
+      "name": "Szene löschen",
+      "description": "Löscht eine Szene aus der Lampe (nur Bluetooth).",
+      "fields": {
+        "scene": {
+          "name": "Szene",
+          "description": "Name oder ID der Szene."
         }
       }
     }
