@@ -67,6 +67,9 @@ class LukeRobertsLamp:
         self.cloud_lamp_id = cloud_lamp_id
         self.state = LampState()
         self.ble_present = ble is not None
+        # Device information read over Bluetooth (monotonic time), None = never.
+        self.details_read_at: float | None = None
+        self.details_reading = False
         self._listeners: list[Callable[[], None]] = []
 
     # --- Listener plumbing ----------------------------------------------------
