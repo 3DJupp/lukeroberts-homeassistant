@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Brand images: the neutral lamp drawing is replaced by the Luke Roberts logo
+  (icon and logo, with dark mode variants) in `brand/`.
+
 ## 0.2.3
 
 No changes to the integration itself. Release for the submission to the

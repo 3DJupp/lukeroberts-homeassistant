@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/3DJupp/lukeroberts-homeassistant/main/custom_components/luke_roberts/brand/icon@2x.png" alt="Luke Roberts Home Assistant integration icon: pendant lamp with uplight and downlight" width="128">
+  <img src="https://raw.githubusercontent.com/3DJupp/lukeroberts-homeassistant/main/custom_components/luke_roberts/brand/icon@2x.png" alt="Luke Roberts logo" width="128">
 </p>
 
 # Luke Roberts for Home Assistant
@@ -404,8 +404,9 @@ Nachfolgefirma.
 - The documents in [`docs/`](https://github.com/3DJupp/lukeroberts-homeassistant/tree/main/docs) remain the copyright of Luke Roberts GmbH
   or its successor company. The MIT license of this repository covers the
   integration code only, not those documents.
-- The icon in `custom_components/luke_roberts/brand/` is a neutral drawing of
-  a pendant lamp made for this project, not the Luke Roberts logo.
+- The images in `custom_components/luke_roberts/brand/` are the Luke Roberts
+  logo, a trademark of Luke Roberts GmbH or its successor company. They are
+  used here only to show which lamps the integration works with.
 - The Home Assistant Bluetooth stack and `bleak-retry-connector` make proxy
   based control possible.
 - Earlier ESPHome approach:
