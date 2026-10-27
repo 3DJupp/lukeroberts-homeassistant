@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.3
+
+No changes to the integration itself. Release for the submission to the
+HACS default repository.
+
+- Validate workflow: the HACS check runs without ignores (the brands check
+  passes with the bundled `brand/icon.png`), and both HACS and hassfest
+  validation also run daily.
+
 ## 0.2.2
 
 - Firmware check: a lamp that is up to date showed no newest version, because
