@@ -167,54 +167,6 @@
           "description": "Revert to the scene after this time (max 65 s). 0 keeps it."
         }
       }
-    },
-    "save_scene": {
-      "name": "Save scene",
-      "description": "Store a scene in the lamp (Bluetooth only). Without 'scene' a new scene is added, otherwise that scene is overwritten. Uplight and downlight are set evenly for all segments.",
-      "fields": {
-        "name": {
-          "name": "Name",
-          "description": "Scene name, up to 20 bytes."
-        },
-        "scene": {
-          "name": "Overwrite scene",
-          "description": "Name or id of an existing scene to replace. Leave empty for a new scene."
-        },
-        "uplight_hs_color": {
-          "name": "Uplight hue/saturation",
-          "description": "[hue 0-360, saturation 0-100] for the indirect light."
-        },
-        "uplight_kelvin": {
-          "name": "Uplight colour temperature",
-          "description": "White uplight instead of a colour."
-        },
-        "uplight_brightness": {
-          "name": "Uplight brightness",
-          "description": "Brightness of the uplight. Without colour the uplight is off unless set."
-        },
-        "downlight_kelvin": {
-          "name": "Downlight colour temperature",
-          "description": "Colour temperature of the direct light."
-        },
-        "downlight_brightness": {
-          "name": "Downlight brightness",
-          "description": "Brightness of the direct light."
-        },
-        "activate": {
-          "name": "Activate",
-          "description": "Select the scene right after saving."
-        }
-      }
-    },
-    "delete_scene": {
-      "name": "Delete scene",
-      "description": "Delete a scene from the lamp (Bluetooth only).",
-      "fields": {
-        "scene": {
-          "name": "Scene",
-          "description": "Name or id of the scene."
-        }
-      }
     }
   }
 }

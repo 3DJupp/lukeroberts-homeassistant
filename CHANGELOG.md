@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.4
+
+- **Removed** the experimental actions `luke_roberts.save_scene` and
+  `luke_roberts.delete_scene`. The scene record format is not part of the
+  published Lamp Control API v1.3 and was never confirmed on a real lamp,
+  and both actions overwrite or erase scenes in the lamp without a way to
+  undo it from Home Assistant. They come back once the format is verified
+  (for example by Luke Roberts or a capture of the app writing a scene).
+  Automations or scripts that call these actions need to be changed.
+  Selecting scenes, the scene list and `luke_roberts.immediate_light` are
+  unchanged.
+
 ## 0.2.3
 
 No changes to the integration itself. Release for the submission to the

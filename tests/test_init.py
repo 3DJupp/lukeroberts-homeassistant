@@ -23,7 +23,6 @@ from homeassistant.const import (
     STATE_ON,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -175,90 +174,6 @@ async def test_ble_setup_and_control(hass: HomeAssistant) -> None:
         assert hass.states.get(LIGHT).state == STATE_OFF
 
     assert await hass.config_entries.async_unload(entry.entry_id)
-
-
-async def test_scene_services(hass: HomeAssistant) -> None:
-    """Scenes are created, overwritten and deleted in the lamp."""
-    client = FakeLampClient()
-    await _setup_ble(hass, client)
-
-    with patch(
-        "custom_components.luke_roberts.ble.establish_connection",
-        AsyncMock(return_value=client),
-    ):
-        client.written.clear()
-        await hass.services.async_call(
-            DOMAIN,
-            "save_scene",
-            {
-                ATTR_ENTITY_ID: LIGHT,
-                "name": "Abendessen",
-                "uplight_hs_color": [30, 80],
-                "uplight_brightness": 50,
-                "downlight_kelvin": 3000,
-                "downlight_brightness": 80,
-                "activate": True,
-            },
-            blocking=True,
-        )
-        assert client.written[0] == protocol.static_scene(
-            protocol.SCENE_NEW,
-            "Abendessen",
-            Uplight(saturation=204, hue=5461, brightness=128),
-            Downlight(kelvin=3000, brightness=204),
-        )
-        assert client.written[-1] == protocol.select_scene(3)
-        state = hass.states.get(LIGHT)
-        assert state.attributes[ATTR_EFFECT_LIST] == [
-            "Default",
-            "Lesen",
-            "Gemütlich",
-            "Abendessen",
-        ]
-        assert state.attributes[ATTR_EFFECT] == "Abendessen"
-
-        client.written.clear()
-        await hass.services.async_call(
-            DOMAIN,
-            "save_scene",
-            {ATTR_ENTITY_ID: LIGHT, "name": "Lesen hell", "scene": "Lesen"},
-            blocking=True,
-        )
-        assert client.written[0] == protocol.static_scene(
-            1,
-            "Lesen hell",
-            Uplight(saturation=0, hue=2700, brightness=0),
-            Downlight(kelvin=2700, brightness=255),
-        )
-        assert client.scenes[1] == "Lesen hell"
-
-        client.written.clear()
-        await hass.services.async_call(
-            DOMAIN,
-            "delete_scene",
-            {ATTR_ENTITY_ID: LIGHT, "scene": "Abendessen"},
-            blocking=True,
-        )
-        # The active scene is left first, like the app does.
-        assert client.written[0] == protocol.select_scene(1)
-        assert client.written[1] == protocol.delete_scene(3)
-        assert 3 not in client.scenes
-        assert "Abendessen" not in hass.states.get(LIGHT).attributes[ATTR_EFFECT_LIST]
-
-        with pytest.raises(ServiceValidationError):
-            await hass.services.async_call(
-                DOMAIN,
-                "delete_scene",
-                {ATTR_ENTITY_ID: LIGHT, "scene": "Gibt es nicht"},
-                blocking=True,
-            )
-        with pytest.raises(HomeAssistantError):
-            await hass.services.async_call(
-                DOMAIN,
-                "delete_scene",
-                {ATTR_ENTITY_ID: LIGHT, "scene": "Off"},
-                blocking=True,
-            )
 
 
 async def test_firmware_entity(
