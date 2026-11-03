@@ -49,8 +49,6 @@ account, the command is sent through the Luke Roberts cloud instead.
 - `luke_roberts.immediate_light` action for the transient Immediate Light
   command, including the **coloured uplight** (hue/saturation) and the
   downlight, with optional automatic revert
-- **Create, change and delete scenes** in the lamp from Home Assistant
-  (`luke_roberts.save_scene`, `luke_roberts.delete_scene`), experimental
 - **Firmware entity** with the installed version and, with a firmware check
   key, the newest version from the Luke Roberts firmware server
 - **Connection modes**: Bluetooth first with cloud fallback, Bluetooth only,
@@ -167,30 +165,6 @@ data:
   duration:
     seconds: 10                # 0 = keep until the next scene change
 ```
-
-### Scenes from Home Assistant (experimental)
-
-Scenes are stored in the lamp, so the Luke Roberts app and the lamp's click
-detection see them too. The record format comes from the Luke Roberts app
-2.4.0, it is not part of the published API. Uplight and downlight are set
-evenly for all segments. Bluetooth only.
-
-```yaml
-action: luke_roberts.save_scene
-target:
-  entity_id: light.esstisch
-data:
-  name: Abendessen          # up to 20 bytes
-  uplight_hs_color: [30, 80]
-  uplight_brightness: 50
-  downlight_kelvin: 2900
-  downlight_brightness: 70
-  activate: true            # select it right away
-```
-
-Add `scene: Lesen` (name or id) to overwrite an existing scene instead of
-adding one. `luke_roberts.delete_scene` with `scene: Abendessen` removes it.
-Scenes 0 (Off) and the default scene cannot be changed.
 
 ### Firmware
 

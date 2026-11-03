@@ -167,54 +167,6 @@
           "description": "Nach dieser Zeit zur Szene zurückkehren (max. 65 s). 0 behält die Änderung."
         }
       }
-    },
-    "save_scene": {
-      "name": "Szene speichern",
-      "description": "Speichert eine Szene in der Lampe (nur Bluetooth). Ohne 'Szene überschreiben' wird eine neue Szene angelegt, sonst diese ersetzt. Uplight und Downlight gelten gleichmäßig für alle Segmente.",
-      "fields": {
-        "name": {
-          "name": "Name",
-          "description": "Name der Szene, höchstens 20 Bytes."
-        },
-        "scene": {
-          "name": "Szene überschreiben",
-          "description": "Name oder ID einer vorhandenen Szene. Leer lassen für eine neue Szene."
-        },
-        "uplight_hs_color": {
-          "name": "Uplight Farbton/Sättigung",
-          "description": "[Farbton 0-360, Sättigung 0-100] für das indirekte Licht."
-        },
-        "uplight_kelvin": {
-          "name": "Uplight Farbtemperatur",
-          "description": "Weißes Uplight statt einer Farbe."
-        },
-        "uplight_brightness": {
-          "name": "Uplight Helligkeit",
-          "description": "Helligkeit des Uplights. Ohne Farbe bleibt das Uplight aus, solange sie nicht gesetzt ist."
-        },
-        "downlight_kelvin": {
-          "name": "Downlight Farbtemperatur",
-          "description": "Farbtemperatur des direkten Lichts."
-        },
-        "downlight_brightness": {
-          "name": "Downlight Helligkeit",
-          "description": "Helligkeit des direkten Lichts."
-        },
-        "activate": {
-          "name": "Aktivieren",
-          "description": "Szene nach dem Speichern auswählen."
-        }
-      }
-    },
-    "delete_scene": {
-      "name": "Szene löschen",
-      "description": "Löscht eine Szene aus der Lampe (nur Bluetooth).",
-      "fields": {
-        "scene": {
-          "name": "Szene",
-          "description": "Name oder ID der Szene."
-        }
-      }
     }
   }
 }

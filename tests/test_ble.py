@@ -7,7 +7,6 @@ from unittest.mock import AsyncMock, patch
 
 from custom_components.luke_roberts import protocol
 from custom_components.luke_roberts.ble import LukeRobertsBle
-from custom_components.luke_roberts.const import SCENE_CHAR_UUID
 
 from .common import FakeLampClient, service_info
 
@@ -64,18 +63,4 @@ async def test_device_info() -> None:
             "firmware": "21.3",
             "software": "1.3.2",
         }
-        await ble.disconnect()
-
-
-async def test_write_record_answer_on_api_char() -> None:
-    """Scene records go to their characteristic, the answer comes on the API."""
-    client = FakeLampClient()
-    with patch(
-        "custom_components.luke_roberts.ble.establish_connection",
-        AsyncMock(return_value=client),
-    ):
-        ble = LukeRobertsBle(service_info().device, "Lamp", linger=0)
-        answer = await ble.write_record(SCENE_CHAR_UUID, protocol.delete_scene(2))
-        assert answer == bytes.fromhex("00 00 00 00 02 02 00")
-        assert 2 not in client.scenes
         await ble.disconnect()
