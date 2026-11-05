@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.5
+
+- **Brighter / Dimmer** (issue #13): the Lamp Control API v1.3 says Relative
+  Brightness (opcode `08`) multiplies the brightness, the Luke Roberts app
+  2.4.0 treats the same byte as a signed change. New config entity
+  `select.<lamp>_relative_brightness_mode` switches between `multiply`
+  (default) and `delta` so it can be tested on a real lamp.
+- `multiply` now uses ×1.25 / ×0.8 (was ×1.2 / ×0.8), so one step down and
+  one step up end where they started. `delta` sends +20 / −20.
+- New [docs/dashboard.md](docs/dashboard.md) with a full dashboard, a
+  diagnostics card and the steps for the Brighter / Dimmer test.
+
 ## 0.2.4
 
 - **Removed** the experimental actions `luke_roberts.save_scene` and

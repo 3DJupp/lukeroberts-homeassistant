@@ -132,7 +132,8 @@ proxies.
 | `light.<lamp>` | On/off, brightness, colour temperature, scenes as effects |
 | `select.<lamp>_scene` | Scene picker with the names from the lamp |
 | `button.<lamp>_next_brighter_scene` / `_next_dimmer_scene` | Opcode `06` |
-| `button.<lamp>_brighter` / `_dimmer` | Relative brightness ×1.2 / ×0.8 (opcode `08`) |
+| `button.<lamp>_brighter` / `_dimmer` | Relative brightness (opcode `08`), ×1.25 / ×0.8 or +20 / −20, see below |
+| `select.<lamp>_relative_brightness_mode` | How Brighter / Dimmer encode opcode `08`: `multiply` (API v1.3) or `delta` (app 2.4.0) (config) |
 | `button.<lamp>_refresh_scenes` | Re-read scene names (diagnostic) |
 | `button.<lamp>_ping` | Ping (diagnostic, disabled by default) |
 | `sensor.<lamp>_last_command_route` | `bluetooth` or `cloud` (diagnostic) |
@@ -175,6 +176,16 @@ server every 6 hours, the same way the app does. The key is the `Api-Key`
 the Luke Roberts app uses for that server; it is not published here. Updates
 are installed with the Luke Roberts app.
 
+### Brighter / Dimmer
+
+The Lamp Control API v1.3 describes Relative Brightness (opcode `08`) as a
+multiplication, the Luke Roberts app 2.4.0 treats the same byte as a signed
+change. Which one the firmware does is not confirmed yet, so
+`select.<lamp>_relative_brightness_mode` lets you pick. Either way the lamp
+never gets brighter than the active scene; use the light's brightness slider
+to set an exact level. [docs/dashboard.md](docs/dashboard.md#testing-brighter--dimmer)
+describes a quick test.
+
 ### Dashboard example
 
 ```yaml
@@ -190,6 +201,10 @@ cards:
     features:
       - type: select-options
 ```
+
+A full dashboard with scene and brightness buttons, a hint while the lamp is
+out of Bluetooth range and a diagnostics card is in
+[docs/dashboard.md](docs/dashboard.md).
 
 ## Coming from the ESPHome gateway?
 

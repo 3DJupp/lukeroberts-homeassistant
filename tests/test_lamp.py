@@ -13,6 +13,7 @@ from custom_components.luke_roberts.const import (
     MODE_CLOUD_FIRST,
     MODE_LOCAL_FIRST,
     MODE_LOCAL_ONLY,
+    RELATIVE_MODE_DELTA,
 )
 from custom_components.luke_roberts.lamp import (
     ROUTE_BLUETOOTH,
@@ -173,3 +174,41 @@ async def test_ping_falls_back_to_v1() -> None:
     ble = MagicMock(request=AsyncMock(side_effect=[b"\x87", b"\x00"]))
     lamp = _lamp(MODE_LOCAL_FIRST, ble, None)
     assert await lamp.ping() == 1
+
+
+async def test_brightness_step_multiply() -> None:
+    """Default mode follows the spec: x0.8 down, x1.25 up, back to 100 %."""
+    ble = _ble()
+    lamp = _lamp(MODE_LOCAL_FIRST, ble, None)
+    lamp.state.brightness = 100
+    await lamp.brightness_step(-1)
+    assert ble.request.await_args.args[0] == protocol.relative_brightness(80)
+    assert lamp.state.brightness == 80
+    await lamp.brightness_step(1)
+    assert ble.request.await_args.args[0] == protocol.relative_brightness(125)
+    assert lamp.state.brightness == 100
+    await lamp.brightness_step(1)
+    assert lamp.state.brightness == 100
+
+
+async def test_brightness_step_delta() -> None:
+    """Delta mode sends a signed change and adds it to the assumed state."""
+    ble = _ble()
+    lamp = _lamp(MODE_LOCAL_FIRST, ble, None)
+    lamp.relative_mode = RELATIVE_MODE_DELTA
+    lamp.state.brightness = 30
+    await lamp.brightness_step(-1)
+    assert ble.request.await_args.args[0] == protocol.relative_brightness_delta(-20)
+    assert lamp.state.brightness == 10
+    await lamp.brightness_step(-1)
+    assert lamp.state.brightness == 0
+    await lamp.brightness_step(1)
+    assert ble.request.await_args.args[0] == protocol.relative_brightness_delta(20)
+    assert lamp.state.brightness == 20
+
+
+async def test_brightness_step_needs_ble() -> None:
+    """Relative steps have no cloud equivalent."""
+    lamp = _lamp(MODE_LOCAL_FIRST, None, MagicMock())
+    with pytest.raises(HomeAssistantError):
+        await lamp.brightness_step(1)

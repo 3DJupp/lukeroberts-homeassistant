@@ -27,6 +27,10 @@ from custom_components.luke_roberts.protocol import Downlight, Uplight
         (protocol.adjust_color_temperature(-100), "a0 02 07 ff 9c"),
         (protocol.relative_brightness(120), "a0 02 08 78"),
         (protocol.relative_brightness(80), "a0 02 08 50"),
+        (protocol.relative_brightness(125), "a0 02 08 7d"),
+        (protocol.relative_brightness_delta(20), "a0 02 08 14"),
+        (protocol.relative_brightness_delta(-20), "a0 02 08 ec"),
+        (protocol.relative_brightness_delta(-300), "a0 02 08 80"),
     ],
 )
 def test_frames(frame: bytes, expected: str) -> None:

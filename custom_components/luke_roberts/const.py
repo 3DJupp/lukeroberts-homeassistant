@@ -64,6 +64,18 @@ MAX_KELVIN: Final = 4000
 SCENE_OFF: Final = 0x00
 SCENE_DEFAULT: Final = 0xFF
 
+# Opcode 08 Relative Brightness: the Lamp Control API v1.3 says the current
+# brightness is multiplied by PP/100. The Luke Roberts app 2.4.0 labels the
+# same byte as a signed change ("+20 % brighter", "-20 % darker"). Which one
+# the firmware does is not confirmed yet, so both can be chosen per lamp.
+RELATIVE_MODE_MULTIPLY: Final = "multiply"
+RELATIVE_MODE_DELTA: Final = "delta"
+RELATIVE_MODES: Final = [RELATIVE_MODE_MULTIPLY, RELATIVE_MODE_DELTA]
+# multiply: x1.25 / x0.8 cancel each other out; delta: +20 / -20 points.
+RELATIVE_FACTOR_UP: Final = 125
+RELATIVE_FACTOR_DOWN: Final = 80
+RELATIVE_DELTA_STEP: Final = 20
+
 # Cloud API accepts scene ids 0..31; used when names are unknown (cloud only).
 CLOUD_MAX_SCENE_ID: Final = 31
 

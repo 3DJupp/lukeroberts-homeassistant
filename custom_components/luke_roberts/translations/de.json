@@ -114,6 +114,13 @@
     "select": {
       "scene": {
         "name": "Szene"
+      },
+      "relative_brightness_mode": {
+        "name": "Modus relative Helligkeit",
+        "state": {
+          "multiply": "Multiplizieren (API v1.3)",
+          "delta": "Plus/Minus (App 2.4.0)"
+        }
       }
     },
     "sensor": {

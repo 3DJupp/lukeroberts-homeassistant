@@ -134,6 +134,13 @@ def relative_brightness(percent: int) -> bytes:
     return bytes([PREFIX, 0x02, Opcode.RELATIVE_BRIGHTNESS, _clamp(percent, 0, 255)])
 
 
+def relative_brightness_delta(delta: int) -> bytes:
+    """08 Relative Brightness with a signed change, as the app 2.4.0 labels it."""
+    return bytes([PREFIX, 0x02, Opcode.RELATIVE_BRIGHTNESS]) + struct.pack(
+        ">b", _clamp(delta, -128, 127)
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class Uplight:
     """Uplight sub-packet of Immediate Light (indirect, colour capable)."""

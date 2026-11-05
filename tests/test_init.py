@@ -166,6 +166,36 @@ async def test_ble_setup_and_control(hass: HomeAssistant) -> None:
         )
         assert client.written == [protocol.next_scene_by_brightness(-1)]
 
+        mode = "select.esstisch_relative_brightness_mode"
+        assert hass.states.get(mode).state == "multiply"
+        client.written.clear()
+        await hass.services.async_call(
+            "button", "press", {ATTR_ENTITY_ID: "button.esstisch_dimmer"}, blocking=True
+        )
+        assert client.written == [protocol.relative_brightness(80)]
+
+        await hass.services.async_call(
+            SELECT_DOMAIN,
+            "select_option",
+            {ATTR_ENTITY_ID: mode, "option": "delta"},
+            blocking=True,
+        )
+        assert hass.states.get(mode).state == "delta"
+        client.written.clear()
+        await hass.services.async_call(
+            "button", "press", {ATTR_ENTITY_ID: "button.esstisch_dimmer"}, blocking=True
+        )
+        await hass.services.async_call(
+            "button",
+            "press",
+            {ATTR_ENTITY_ID: "button.esstisch_brighter"},
+            blocking=True,
+        )
+        assert client.written == [
+            protocol.relative_brightness_delta(-20),
+            protocol.relative_brightness_delta(20),
+        ]
+
         client.written.clear()
         await hass.services.async_call(
             LIGHT_DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: LIGHT}, blocking=True

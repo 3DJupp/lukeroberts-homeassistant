@@ -61,6 +61,22 @@ Writes to any of these characteristics are answered by a notification on
 
 API frame: `A0 <api> <opcode|flags> [PIN u16 if flag 0x40] [id u16 if flag 0x80] <data>`.
 
+## Brightness
+
+* The app has no brightness control of its own. `03` and `08` only appear in
+  `BLEValueProxyPayloadBrightness`, which relays cloud commands while the
+  phone acts as bridge (silent push). Fields: `brightness: Int`,
+  `relative: Boolean`.
+* `relative = false` sends `A0 02 03 PP`, `relative = true` sends
+  `A0 02 08 PP`; the value is written with a plain `int-to-byte`.
+* A second payload `BLEValueProxyPayloadPowerLevel` sends `A0 01 03 PP`, so
+  the lamp seems to accept opcode `03` with API byte `01` and `02`.
+* The app labels relative commands with `cloud_command_brightness_relative_up`
+  ("%d%% brighter") when the value is > 0 and `..._relative_down`
+  ("%d%% darker") otherwise. It treats the byte as a signed change, while
+  the Lamp Control API v1.3 says the brightness is multiplied by `PP/100`.
+  Which one the firmware does is not confirmed (*open*).
+
 ## Scenes
 
 Scenes are written as raw records to `…43`, big endian:
