@@ -64,6 +64,11 @@ MAX_KELVIN: Final = 4000
 SCENE_OFF: Final = 0x00
 SCENE_DEFAULT: Final = 0xFF
 
+# Opcode 08 Relative Brightness takes a signed change in percentage points.
+# The Lamp Control API v1.3 describes a multiplication by PP/100, but the lamp
+# behaves like the Luke Roberts app 2.4.0 labels it ("+20 % brighter").
+RELATIVE_BRIGHTNESS_STEP: Final = 20
+
 # Cloud API accepts scene ids 0..31; used when names are unknown (cloud only).
 CLOUD_MAX_SCENE_ID: Final = 31
 

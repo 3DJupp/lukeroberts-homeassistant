@@ -23,6 +23,7 @@ from .const import (
     MODE_CLOUD_FIRST,
     MODE_CLOUD_ONLY,
     MODE_LOCAL_ONLY,
+    RELATIVE_BRIGHTNESS_STEP,
     SCENE_DEFAULT,
     SCENE_OFF,
 )
@@ -277,20 +278,23 @@ class LukeRobertsLamp:
         self.state.brightness = 100
         self.notify()
 
-    async def relative_brightness(self, percent: int) -> None:
-        """Scale the current brightness. BLE only."""
+    async def relative_brightness(self, delta: int) -> None:
+        """Change the current brightness by delta percentage points. BLE only."""
 
         async def local(ble: LukeRobertsBle) -> None:
             protocol.check_status(
-                await ble.request(protocol.relative_brightness(percent))
+                await ble.request(protocol.relative_brightness(delta))
             )
 
         await self._run(local, None)
         if self.state.brightness is not None:
-            self.state.brightness = max(
-                0, min(100, round(self.state.brightness * percent / 100))
-            )
+            self.state.brightness = max(0, min(100, self.state.brightness + delta))
         self.notify()
+
+    async def brightness_step(self, direction: int) -> None:
+        """One step brighter (+1) or dimmer (-1)."""
+        step = RELATIVE_BRIGHTNESS_STEP
+        await self.relative_brightness(step if direction >= 0 else -step)
 
     async def immediate_light(
         self,

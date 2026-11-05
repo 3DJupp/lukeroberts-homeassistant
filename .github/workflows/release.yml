@@ -24,3 +24,6 @@ jobs:
       - uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
+          # v1.2.3b1 / v1.2.3rc1 are test builds, HACS only offers them with
+          # the repository's pre-release switch turned on.
+          prerelease: ${{ contains(github.ref_name, 'b') || contains(github.ref_name, 'rc') }}

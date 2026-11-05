@@ -5,10 +5,15 @@ from __future__ import annotations
 from homeassistant.components.select import SelectEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import LukeRobertsConfigEntry
+from .const import DOMAIN
 from .entity import LukeRobertsEntity
+
+# Test setting from the 0.2.5b1 pre-release, removed again.
+_REMOVED_KEYS = ("relative_brightness_mode",)
 
 
 async def async_setup_entry(
@@ -17,6 +22,12 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the scene select."""
+    registry = er.async_get(hass)
+    for key in _REMOVED_KEYS:
+        if entity_id := registry.async_get_entity_id(
+            "select", DOMAIN, f"{entry.unique_id}_{key}"
+        ):
+            registry.async_remove(entity_id)
     async_add_entities([LukeRobertsSceneSelect(entry)])
 
 

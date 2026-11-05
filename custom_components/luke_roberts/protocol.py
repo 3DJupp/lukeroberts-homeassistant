@@ -129,9 +129,15 @@ def adjust_color_temperature(increment: int) -> bytes:
     )
 
 
-def relative_brightness(percent: int) -> bytes:
-    """08 Relative Brightness, multiplies the current brightness by percent/100."""
-    return bytes([PREFIX, 0x02, Opcode.RELATIVE_BRIGHTNESS, _clamp(percent, 0, 255)])
+def relative_brightness(delta: int) -> bytes:
+    """08 Relative Brightness, signed change of the current brightness.
+
+    The API document says the brightness is multiplied by PP/100; on the lamp
+    the byte is a signed change in percentage points, as the app 2.4.0 uses it.
+    """
+    return bytes([PREFIX, 0x02, Opcode.RELATIVE_BRIGHTNESS]) + struct.pack(
+        ">b", _clamp(delta, -128, 127)
+    )
 
 
 @dataclass(frozen=True, slots=True)
