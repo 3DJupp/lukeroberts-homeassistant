@@ -12,7 +12,6 @@ SERVICE_UUID: Final = "44092840-0567-11e6-b862-0002a5d5c51b"
 API_CHAR_UUID: Final = "44092842-0567-11e6-b862-0002a5d5c51b"
 # Scene records, written like the Luke Roberts app 2.4.0 does. The lamp answers
 # on the API characteristic.
-SCENE_CHAR_UUID: Final = "44092843-0567-11e6-b862-0002a5d5c51b"
 
 # Device Information Service (0x180A)
 DIS_MANUFACTURER_UUID: Final = "00002a29-0000-1000-8000-00805f9b34fb"
@@ -65,11 +64,14 @@ MAX_KELVIN: Final = 4000
 SCENE_OFF: Final = 0x00
 SCENE_DEFAULT: Final = 0xFF
 
+# Opcode 08 Relative Brightness takes a signed change in percentage points.
+# The Lamp Control API v1.3 describes a multiplication by PP/100, but the lamp
+# behaves like the Luke Roberts app 2.4.0 labels it ("+20 % brighter").
+RELATIVE_BRIGHTNESS_STEP: Final = 20
+
 # Cloud API accepts scene ids 0..31; used when names are unknown (cloud only).
 CLOUD_MAX_SCENE_ID: Final = 31
 
 # --- Services ----------------------------------------------------------------
 SERVICE_IMMEDIATE_LIGHT: Final = "immediate_light"
 SERVICE_REFRESH_SCENES: Final = "refresh_scenes"
-SERVICE_SAVE_SCENE: Final = "save_scene"
-SERVICE_DELETE_SCENE: Final = "delete_scene"

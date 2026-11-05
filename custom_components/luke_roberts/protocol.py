@@ -129,9 +129,15 @@ def adjust_color_temperature(increment: int) -> bytes:
     )
 
 
-def relative_brightness(percent: int) -> bytes:
-    """08 Relative Brightness, multiplies the current brightness by percent/100."""
-    return bytes([PREFIX, 0x02, Opcode.RELATIVE_BRIGHTNESS, _clamp(percent, 0, 255)])
+def relative_brightness(delta: int) -> bytes:
+    """08 Relative Brightness, signed change of the current brightness.
+
+    The API document says the brightness is multiplied by PP/100; on the lamp
+    the byte is a signed change in percentage points, as the app 2.4.0 uses it.
+    """
+    return bytes([PREFIX, 0x02, Opcode.RELATIVE_BRIGHTNESS]) + struct.pack(
+        ">b", _clamp(delta, -128, 127)
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -184,110 +190,6 @@ def immediate_light(
         + struct.pack(">H", _clamp(duration_ms, 0, 0xFFFF))
         + payload
     )
-
-
-# --- Scene records -------------------------------------------------------------
-#
-# Not part of the Lamp Control API v1.3. Layout taken from the Luke Roberts app
-# 2.4.0: records are written to the scene characteristic and the lamp answers
-# on the API characteristic with ``00 <u32 sync version> <scene id> <sort>``.
-
-SCENE_RECORD_VERSION = 0x01
-SCENE_NEW = 0xFE  # the lamp assigns the id of a new scene
-SCENE_NAME_LENGTH = 20
-UPLIGHT_SEGMENTS = 16
-DOWNLIGHT_SPOTS = 84
-
-
-class SceneType(IntEnum):
-    """Record type byte of a scene record."""
-
-    DELETE = 0x00
-    STATIC = 0x01
-
-
-def _scene_header(scene_id: int, scene_type: int, sort_index: int = 0) -> bytes:
-    return struct.pack(
-        ">BBBBi",
-        SCENE_RECORD_VERSION,
-        scene_id & 0xFF,
-        sort_index & 0xFF,
-        scene_type,
-        0,  # group id
-    )
-
-
-def _scene_name(name: str) -> bytes:
-    raw = name.encode("utf-8")[:SCENE_NAME_LENGTH]
-    # Do not cut a multi-byte character in half.
-    raw = raw.decode("utf-8", errors="ignore").encode("utf-8")
-    return raw.ljust(SCENE_NAME_LENGTH, b"\x00")
-
-
-def static_scene(
-    scene_id: int,
-    name: str,
-    uplight: Uplight | list[Uplight],
-    downlight: Downlight | list[int],
-    sort_index: int = 0,
-) -> bytes:
-    """Static scene record (178 bytes).
-
-    ``uplight`` is one setting for all 16 segments or a list of 16.
-    ``downlight`` is one setting for all 84 spots or a list of 84 spot
-    brightnesses (0..255) at the default 2700 K.
-    """
-    segments = uplight if isinstance(uplight, list) else [uplight] * UPLIGHT_SEGMENTS
-    if len(segments) != UPLIGHT_SEGMENTS:
-        raise ValueError(f"Uplight needs {UPLIGHT_SEGMENTS} segments")
-    if isinstance(downlight, Downlight):
-        kelvin = downlight.kelvin
-        spots = [downlight.brightness] * DOWNLIGHT_SPOTS
-    else:
-        kelvin = 2700
-        spots = downlight
-    if len(spots) != DOWNLIGHT_SPOTS:
-        raise ValueError(f"Downlight needs {DOWNLIGHT_SPOTS} spots")
-
-    record = _scene_header(scene_id, SceneType.STATIC, sort_index)
-    record += struct.pack(">H", _clamp(kelvin, 2700, 4000))
-    for segment in segments:
-        if segment.saturation == 0:
-            value = _clamp(segment.hue, 2700, 4000)  # white, hue carries Kelvin
-        else:
-            value = _clamp(segment.hue, 0, 0xFFFF)
-        record += struct.pack(
-            ">BHB",
-            _clamp(segment.saturation, 0, 255),
-            value,
-            _clamp(segment.brightness, 0, 255),
-        )
-    record += bytes(_clamp(spot, 0, 255) for spot in spots)
-    return record + _scene_name(name)
-
-
-def delete_scene(scene_id: int) -> bytes:
-    """Scene record that deletes a scene (header only)."""
-    return _scene_header(scene_id, SceneType.DELETE)
-
-
-@dataclass(frozen=True, slots=True)
-class SceneWrite:
-    """Answer of the lamp to a scene record."""
-
-    sync_version: int | None
-    scene_id: int | None
-    sort_index: int | None
-
-
-def parse_scene_write(response: bytes) -> SceneWrite:
-    """Parse ``00 <u32 sync version> <scene id> <sort index>``."""
-    check_status(response)
-    payload = response[1:]
-    sync_version = struct.unpack(">I", payload[:4])[0] if len(payload) >= 4 else None
-    scene_id = payload[4] if len(payload) >= 5 else None
-    sort_index = payload[5] if len(payload) >= 6 else None
-    return SceneWrite(sync_version, scene_id, sort_index)
 
 
 # --- Response parsers ---------------------------------------------------------

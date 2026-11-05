@@ -122,6 +122,11 @@ Machbar ✅ (M bis L):
   während man schiebt).
 * **Hinweis in der Doku**: Änderungen gehen beim Szenenwechsel in der App
   oder per Click Detection verloren, das ist eine Eigenschaft der Lampe.
+* **Szenen in der Lampe speichern/löschen**: war in 0.2.1 bis 0.2.3 als
+  experimentelle Aktion drin (Format aus der App 2.4.0, siehe
+  `docs/app-2.4.0-findings.md`), in 0.2.4 auf Wunsch des HACS Reviews
+  entfernt. Erst wieder einbauen, wenn das Record Format an einer echten
+  Lampe bestätigt ist (Luke Roberts oder Mitschnitt der App).
 
 ### F3 Weitere Features
 

@@ -26,9 +26,7 @@ from .const import (
     MAX_KELVIN,
     MIN_KELVIN,
     SCENE_OFF,
-    SERVICE_DELETE_SCENE,
     SERVICE_IMMEDIATE_LIGHT,
-    SERVICE_SAVE_SCENE,
 )
 from .entity import LukeRobertsEntity
 from .protocol import Downlight, Uplight
@@ -41,9 +39,6 @@ ATTR_UPLIGHT_KELVIN = "uplight_kelvin"
 ATTR_UPLIGHT_BRIGHTNESS = "uplight_brightness"
 ATTR_DOWNLIGHT_KELVIN = "downlight_kelvin"
 ATTR_DOWNLIGHT_BRIGHTNESS = "downlight_brightness"
-ATTR_NAME = "name"
-ATTR_SCENE = "scene"
-ATTR_ACTIVATE = "activate"
 
 IMMEDIATE_LIGHT_SCHEMA = {
     vol.Optional(ATTR_UPLIGHT_HS_COLOR): vol.All(
@@ -72,21 +67,6 @@ IMMEDIATE_LIGHT_SCHEMA = {
     ),
 }
 
-SAVE_SCENE_SCHEMA = {
-    vol.Required(ATTR_NAME): vol.All(cv.string, vol.Length(min=1, max=20)),
-    vol.Optional(ATTR_SCENE): vol.Any(vol.Coerce(int), cv.string),
-    **{
-        key: value
-        for key, value in IMMEDIATE_LIGHT_SCHEMA.items()
-        if key != ATTR_DURATION
-    },
-    vol.Optional(ATTR_ACTIVATE, default=False): cv.boolean,
-}
-
-DELETE_SCENE_SCHEMA = {
-    vol.Required(ATTR_SCENE): vol.Any(vol.Coerce(int), cv.string),
-}
-
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -101,12 +81,6 @@ async def async_setup_entry(
         SERVICE_IMMEDIATE_LIGHT,
         IMMEDIATE_LIGHT_SCHEMA,
         "async_immediate_light",
-    )
-    platform.async_register_entity_service(
-        SERVICE_SAVE_SCENE, SAVE_SCENE_SCHEMA, "async_save_scene"
-    )
-    platform.async_register_entity_service(
-        SERVICE_DELETE_SCENE, DELETE_SCENE_SCHEMA, "async_delete_scene"
     )
 
 
@@ -243,41 +217,3 @@ class LukeRobertsLight(LukeRobertsEntity, LightEntity, RestoreEntity):
         if duration_ms > 0xFFFF:
             raise ServiceValidationError("duration must be at most 65 seconds")
         await self._lamp.immediate_light(uplight, downlight, duration_ms)
-
-    def _scene_id(self, value: int | str) -> int:
-        """Scene id from an id or a name of the scene list."""
-        options = self._lamp.scene_options()
-        if isinstance(value, int) or str(value).isdigit():
-            scene_id = int(value)
-            if scene_id in options.values():
-                return scene_id
-        elif str(value) in options:
-            return options[str(value)]
-        raise ServiceValidationError(
-            f"Unknown scene '{value}', refresh the scenes if it was just created"
-        )
-
-    async def async_save_scene(self, **kwargs: Any) -> None:
-        """Store a scene in the lamp (new, or overwrite ``scene``)."""
-        scene_id: int | None = None
-        if (value := kwargs.get(ATTR_SCENE)) is not None:
-            scene_id = self._scene_id(value)
-        downlight_kelvin = kwargs.get(ATTR_DOWNLIGHT_KELVIN, MIN_KELVIN)
-        uplight = _uplight(kwargs) or Uplight(
-            saturation=0,
-            hue=downlight_kelvin,
-            brightness=_pct_to_byte(kwargs.get(ATTR_UPLIGHT_BRIGHTNESS, 0)),
-        )
-        downlight = Downlight(
-            kelvin=downlight_kelvin,
-            brightness=_pct_to_byte(kwargs.get(ATTR_DOWNLIGHT_BRIGHTNESS, 100)),
-        )
-        saved_id = await self._lamp.save_scene(
-            kwargs[ATTR_NAME], uplight, downlight, scene_id
-        )
-        if kwargs[ATTR_ACTIVATE]:
-            await self._lamp.select_scene(saved_id)
-
-    async def async_delete_scene(self, **kwargs: Any) -> None:
-        """Delete a scene from the lamp."""
-        await self._lamp.delete_scene(self._scene_id(kwargs[ATTR_SCENE]))

@@ -49,8 +49,6 @@ account, the command is sent through the Luke Roberts cloud instead.
 - `luke_roberts.immediate_light` action for the transient Immediate Light
   command, including the **coloured uplight** (hue/saturation) and the
   downlight, with optional automatic revert
-- **Create, change and delete scenes** in the lamp from Home Assistant
-  (`luke_roberts.save_scene`, `luke_roberts.delete_scene`), experimental
 - **Firmware entity** with the installed version and, with a firmware check
   key, the newest version from the Luke Roberts firmware server
 - **Connection modes**: Bluetooth first with cloud fallback, Bluetooth only,
@@ -134,7 +132,7 @@ proxies.
 | `light.<lamp>` | On/off, brightness, colour temperature, scenes as effects |
 | `select.<lamp>_scene` | Scene picker with the names from the lamp |
 | `button.<lamp>_next_brighter_scene` / `_next_dimmer_scene` | Opcode `06` |
-| `button.<lamp>_brighter` / `_dimmer` | Relative brightness ×1.2 / ×0.8 (opcode `08`) |
+| `button.<lamp>_brighter` / `_dimmer` | Relative brightness +20 / −20 % (opcode `08`) |
 | `button.<lamp>_refresh_scenes` | Re-read scene names (diagnostic) |
 | `button.<lamp>_ping` | Ping (diagnostic, disabled by default) |
 | `sensor.<lamp>_last_command_route` | `bluetooth` or `cloud` (diagnostic) |
@@ -168,30 +166,6 @@ data:
     seconds: 10                # 0 = keep until the next scene change
 ```
 
-### Scenes from Home Assistant (experimental)
-
-Scenes are stored in the lamp, so the Luke Roberts app and the lamp's click
-detection see them too. The record format comes from the Luke Roberts app
-2.4.0, it is not part of the published API. Uplight and downlight are set
-evenly for all segments. Bluetooth only.
-
-```yaml
-action: luke_roberts.save_scene
-target:
-  entity_id: light.esstisch
-data:
-  name: Abendessen          # up to 20 bytes
-  uplight_hs_color: [30, 80]
-  uplight_brightness: 50
-  downlight_kelvin: 2900
-  downlight_brightness: 70
-  activate: true            # select it right away
-```
-
-Add `scene: Lesen` (name or id) to overwrite an existing scene instead of
-adding one. `luke_roberts.delete_scene` with `scene: Abendessen` removes it.
-Scenes 0 (Off) and the default scene cannot be changed.
-
 ### Firmware
 
 `update.<lamp>_firmware` shows the firmware read from the lamp. To also see
@@ -200,6 +174,14 @@ whether a newer version exists, enter a firmware check key in the lamp's
 server every 6 hours, the same way the app does. The key is the `Api-Key`
 the Luke Roberts app uses for that server; it is not published here. Updates
 are installed with the Luke Roberts app.
+
+### Brighter / Dimmer
+
+The buttons change the brightness by 20 percentage points per press. The
+lamp never gets brighter than the active scene; use the light's brightness
+slider to set an exact level. The Lamp Control API v1.3 describes opcode `08`
+as a multiplication, but the lamp treats the byte as a signed change, like
+the Luke Roberts app 2.4.0 does (tested on a real lamp, see issue #13).
 
 ### Dashboard example
 
@@ -216,6 +198,10 @@ cards:
     features:
       - type: select-options
 ```
+
+A full dashboard with scene and brightness buttons, a hint while the lamp is
+out of Bluetooth range and a diagnostics card is in
+[docs/dashboard.md](docs/dashboard.md).
 
 ## Coming from the ESPHome gateway?
 

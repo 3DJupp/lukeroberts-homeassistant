@@ -38,12 +38,12 @@ BUTTONS: tuple[LukeRobertsButtonDescription, ...] = (
     LukeRobertsButtonDescription(
         key="brighter",
         translation_key="brighter",
-        press_fn=lambda lamp: lamp.relative_brightness(120),
+        press_fn=lambda lamp: lamp.brightness_step(1),
     ),
     LukeRobertsButtonDescription(
         key="dimmer",
         translation_key="dimmer",
-        press_fn=lambda lamp: lamp.relative_brightness(80),
+        press_fn=lambda lamp: lamp.brightness_step(-1),
     ),
     LukeRobertsButtonDescription(
         key="refresh_scenes",

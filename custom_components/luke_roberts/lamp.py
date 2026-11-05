@@ -23,7 +23,7 @@ from .const import (
     MODE_CLOUD_FIRST,
     MODE_CLOUD_ONLY,
     MODE_LOCAL_ONLY,
-    SCENE_CHAR_UUID,
+    RELATIVE_BRIGHTNESS_STEP,
     SCENE_DEFAULT,
     SCENE_OFF,
 )
@@ -278,20 +278,23 @@ class LukeRobertsLamp:
         self.state.brightness = 100
         self.notify()
 
-    async def relative_brightness(self, percent: int) -> None:
-        """Scale the current brightness. BLE only."""
+    async def relative_brightness(self, delta: int) -> None:
+        """Change the current brightness by delta percentage points. BLE only."""
 
         async def local(ble: LukeRobertsBle) -> None:
             protocol.check_status(
-                await ble.request(protocol.relative_brightness(percent))
+                await ble.request(protocol.relative_brightness(delta))
             )
 
         await self._run(local, None)
         if self.state.brightness is not None:
-            self.state.brightness = max(
-                0, min(100, round(self.state.brightness * percent / 100))
-            )
+            self.state.brightness = max(0, min(100, self.state.brightness + delta))
         self.notify()
+
+    async def brightness_step(self, direction: int) -> None:
+        """One step brighter (+1) or dimmer (-1)."""
+        step = RELATIVE_BRIGHTNESS_STEP
+        await self.relative_brightness(step if direction >= 0 else -step)
 
     async def immediate_light(
         self,
@@ -311,90 +314,6 @@ class LukeRobertsLamp:
             if downlight is not None:
                 self.state.kelvin = downlight.kelvin
         self.notify()
-
-    async def save_scene(
-        self,
-        name: str,
-        uplight: protocol.Uplight | list[protocol.Uplight],
-        downlight: protocol.Downlight | list[int],
-        scene_id: int | None = None,
-    ) -> int:
-        """Store a static scene in the lamp, new or overwriting one. BLE only.
-
-        Returns the id of the scene, assigned by the lamp for new scenes.
-        """
-        if scene_id in (SCENE_OFF, SCENE_DEFAULT):
-            raise HomeAssistantError(f"{self.name}: this scene cannot be changed")
-        record = protocol.static_scene(
-            protocol.SCENE_NEW if scene_id is None else scene_id,
-            name,
-            uplight,
-            downlight,
-        )
-
-        async def local(ble: LukeRobertsBle) -> protocol.SceneWrite:
-            return protocol.parse_scene_write(
-                await ble.write_record(SCENE_CHAR_UUID, record)
-            )
-
-        result = await self._run_scene_write(local)
-        saved_id = result.scene_id if result.scene_id is not None else scene_id
-        _LOGGER.debug("%s: scene '%s' stored as %s", self.name, name, saved_id)
-        await self._refresh_scenes_after_write()
-        if saved_id is None:
-            # Old firmware without id in the answer: find it by name.
-            saved_id = next(
-                (sid for sid, label in self.state.scenes.items() if label == name),
-                None,
-            )
-        if saved_id is None:
-            raise HomeAssistantError(
-                f"{self.name}: the lamp did not report the id of the new scene"
-            )
-        return saved_id
-
-    async def delete_scene(self, scene_id: int) -> None:
-        """Delete a scene from the lamp. BLE only."""
-        if scene_id in (SCENE_OFF, SCENE_DEFAULT):
-            raise HomeAssistantError(f"{self.name}: this scene cannot be deleted")
-        if self.state.is_on and self.state.scene_id == scene_id:
-            # The app switches to another scene before deleting the active one.
-            other = next(
-                (sid for sid in self.state.scenes if sid not in (SCENE_OFF, scene_id)),
-                None,
-            )
-            if other is not None:
-                await self.select_scene(other)
-        record = protocol.delete_scene(scene_id)
-
-        async def local(ble: LukeRobertsBle) -> protocol.SceneWrite:
-            return protocol.parse_scene_write(
-                await ble.write_record(SCENE_CHAR_UUID, record)
-            )
-
-        await self._run_scene_write(local)
-        await self._refresh_scenes_after_write()
-
-    async def _run_scene_write(
-        self, local: Callable[[LukeRobertsBle], Awaitable[protocol.SceneWrite]]
-    ) -> protocol.SceneWrite:
-        try:
-            return await self._run(local, None)
-        except HomeAssistantError as err:
-            if (
-                isinstance(err.__cause__, protocol.LampError)
-                and err.__cause__.status == protocol.Status.MEMORY_FULL
-            ):
-                raise HomeAssistantError(
-                    f"{self.name}: the lamp has no room for another scene"
-                ) from err
-            raise
-
-    async def _refresh_scenes_after_write(self) -> None:
-        try:
-            await self.refresh_scenes()
-        except HomeAssistantError as err:
-            _LOGGER.debug("%s: reading scenes after write failed: %s", self.name, err)
 
     async def ping(self) -> int:
         """Ping the lamp and return its highest supported API version."""

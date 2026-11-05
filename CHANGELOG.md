@@ -4,6 +4,32 @@
 
 - Brand images: the neutral lamp drawing is replaced by the Luke Roberts logo
   (icon and logo, with dark mode variants) in `brand/`.
+## 0.2.5
+
+- **Fixed Brighter / Dimmer** (issue #13). The Lamp Control API v1.3 says
+  Relative Brightness (opcode `08`) multiplies the brightness by `PP/100`,
+  so the buttons sent 120 and 80. The lamp actually reads the byte as a
+  signed change in percentage points, like the Luke Roberts app 2.4.0 does,
+  so both buttons brightened. They now send +20 and −20. Confirmed on a real
+  lamp with the test select from the 0.2.5b1 pre-release; that select is
+  removed again and cleaned up from the entity registry automatically.
+- New [docs/dashboard.md](docs/dashboard.md) with a full dashboard and a
+  diagnostics card.
+- Release workflow: tags like `v1.2.3b1` or `v1.2.3rc1` are published as
+  GitHub pre-releases, which HACS only offers with the repository's
+  pre-release switch turned on.
+
+## 0.2.4
+
+- **Removed** the experimental actions `luke_roberts.save_scene` and
+  `luke_roberts.delete_scene`. The scene record format is not part of the
+  published Lamp Control API v1.3 and was never confirmed on a real lamp,
+  and both actions overwrite or erase scenes in the lamp without a way to
+  undo it from Home Assistant. They come back once the format is verified
+  (for example by Luke Roberts or a capture of the app writing a scene).
+  Automations or scripts that call these actions need to be changed.
+  Selecting scenes, the scene list and `luke_roberts.immediate_light` are
+  unchanged.
 
 ## 0.2.3
 
