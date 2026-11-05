@@ -2,15 +2,18 @@
 
 ## 0.2.5
 
-- **Brighter / Dimmer** (issue #13): the Lamp Control API v1.3 says Relative
-  Brightness (opcode `08`) multiplies the brightness, the Luke Roberts app
-  2.4.0 treats the same byte as a signed change. New config entity
-  `select.<lamp>_relative_brightness_mode` switches between `multiply`
-  (default) and `delta` so it can be tested on a real lamp.
-- `multiply` now uses ×1.25 / ×0.8 (was ×1.2 / ×0.8), so one step down and
-  one step up end where they started. `delta` sends +20 / −20.
-- New [docs/dashboard.md](docs/dashboard.md) with a full dashboard, a
-  diagnostics card and the steps for the Brighter / Dimmer test.
+- **Fixed Brighter / Dimmer** (issue #13). The Lamp Control API v1.3 says
+  Relative Brightness (opcode `08`) multiplies the brightness by `PP/100`,
+  so the buttons sent 120 and 80. The lamp actually reads the byte as a
+  signed change in percentage points, like the Luke Roberts app 2.4.0 does,
+  so both buttons brightened. They now send +20 and −20. Confirmed on a real
+  lamp with the test select from the 0.2.5b1 pre-release; that select is
+  removed again and cleaned up from the entity registry automatically.
+- New [docs/dashboard.md](docs/dashboard.md) with a full dashboard and a
+  diagnostics card.
+- Release workflow: tags like `v1.2.3b1` or `v1.2.3rc1` are published as
+  GitHub pre-releases, which HACS only offers with the repository's
+  pre-release switch turned on.
 
 ## 0.2.4
 

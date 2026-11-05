@@ -75,7 +75,9 @@ API frame: `A0 <api> <opcode|flags> [PIN u16 if flag 0x40] [id u16 if flag 0x80]
   ("%d%% brighter") when the value is > 0 and `..._relative_down`
   ("%d%% darker") otherwise. It treats the byte as a signed change, while
   the Lamp Control API v1.3 says the brightness is multiplied by `PP/100`.
-  Which one the firmware does is not confirmed (*open*).
+  Tested on a real lamp: the app is right. `A0 02 08 EC` (−20) dims,
+  `A0 02 08 14` (+20) brightens; the multiplier reading (`50` / `7D`) does
+  not dim.
 
 ## Scenes
 

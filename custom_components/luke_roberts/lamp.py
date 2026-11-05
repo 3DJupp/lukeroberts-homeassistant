@@ -23,11 +23,7 @@ from .const import (
     MODE_CLOUD_FIRST,
     MODE_CLOUD_ONLY,
     MODE_LOCAL_ONLY,
-    RELATIVE_DELTA_STEP,
-    RELATIVE_FACTOR_DOWN,
-    RELATIVE_FACTOR_UP,
-    RELATIVE_MODE_DELTA,
-    RELATIVE_MODE_MULTIPLY,
+    RELATIVE_BRIGHTNESS_STEP,
     SCENE_DEFAULT,
     SCENE_OFF,
 )
@@ -71,8 +67,6 @@ class LukeRobertsLamp:
         self.cloud_lamp_id = cloud_lamp_id
         self.state = LampState()
         self.ble_present = ble is not None
-        # How opcode 08 is interpreted, see RELATIVE_MODE_* in const.py.
-        self.relative_mode = RELATIVE_MODE_MULTIPLY
         # Device information read over Bluetooth (monotonic time), None = never.
         self.details_read_at: float | None = None
         self.details_reading = False
@@ -284,36 +278,23 @@ class LukeRobertsLamp:
         self.state.brightness = 100
         self.notify()
 
-    async def relative_brightness(self, percent: int) -> None:
-        """Scale the current brightness by percent/100 (spec). BLE only."""
-        await self._send_relative(protocol.relative_brightness(percent))
-        if self.state.brightness is not None:
-            self.state.brightness = max(
-                0, min(100, round(self.state.brightness * percent / 100))
-            )
-        self.notify()
+    async def relative_brightness(self, delta: int) -> None:
+        """Change the current brightness by delta percentage points. BLE only."""
 
-    async def relative_brightness_delta(self, delta: int) -> None:
-        """Change the current brightness by delta points (app 2.4.0). BLE only."""
-        await self._send_relative(protocol.relative_brightness_delta(delta))
+        async def local(ble: LukeRobertsBle) -> None:
+            protocol.check_status(
+                await ble.request(protocol.relative_brightness(delta))
+            )
+
+        await self._run(local, None)
         if self.state.brightness is not None:
             self.state.brightness = max(0, min(100, self.state.brightness + delta))
         self.notify()
 
     async def brightness_step(self, direction: int) -> None:
-        """One step brighter (+1) or dimmer (-1) in the chosen relative mode."""
-        if self.relative_mode == RELATIVE_MODE_DELTA:
-            step = RELATIVE_DELTA_STEP if direction >= 0 else -RELATIVE_DELTA_STEP
-            await self.relative_brightness_delta(step)
-        else:
-            factor = RELATIVE_FACTOR_UP if direction >= 0 else RELATIVE_FACTOR_DOWN
-            await self.relative_brightness(factor)
-
-    async def _send_relative(self, frame: bytes) -> None:
-        async def local(ble: LukeRobertsBle) -> None:
-            protocol.check_status(await ble.request(frame))
-
-        await self._run(local, None)
+        """One step brighter (+1) or dimmer (-1)."""
+        step = RELATIVE_BRIGHTNESS_STEP
+        await self.relative_brightness(step if direction >= 0 else -step)
 
     async def immediate_light(
         self,

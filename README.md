@@ -132,8 +132,7 @@ proxies.
 | `light.<lamp>` | On/off, brightness, colour temperature, scenes as effects |
 | `select.<lamp>_scene` | Scene picker with the names from the lamp |
 | `button.<lamp>_next_brighter_scene` / `_next_dimmer_scene` | Opcode `06` |
-| `button.<lamp>_brighter` / `_dimmer` | Relative brightness (opcode `08`), ×1.25 / ×0.8 or +20 / −20, see below |
-| `select.<lamp>_relative_brightness_mode` | How Brighter / Dimmer encode opcode `08`: `multiply` (API v1.3) or `delta` (app 2.4.0) (config) |
+| `button.<lamp>_brighter` / `_dimmer` | Relative brightness +20 / −20 % (opcode `08`) |
 | `button.<lamp>_refresh_scenes` | Re-read scene names (diagnostic) |
 | `button.<lamp>_ping` | Ping (diagnostic, disabled by default) |
 | `sensor.<lamp>_last_command_route` | `bluetooth` or `cloud` (diagnostic) |
@@ -178,13 +177,11 @@ are installed with the Luke Roberts app.
 
 ### Brighter / Dimmer
 
-The Lamp Control API v1.3 describes Relative Brightness (opcode `08`) as a
-multiplication, the Luke Roberts app 2.4.0 treats the same byte as a signed
-change. Which one the firmware does is not confirmed yet, so
-`select.<lamp>_relative_brightness_mode` lets you pick. Either way the lamp
-never gets brighter than the active scene; use the light's brightness slider
-to set an exact level. [docs/dashboard.md](docs/dashboard.md#testing-brighter--dimmer)
-describes a quick test.
+The buttons change the brightness by 20 percentage points per press. The
+lamp never gets brighter than the active scene; use the light's brightness
+slider to set an exact level. The Lamp Control API v1.3 describes opcode `08`
+as a multiplication, but the lamp treats the byte as a signed change, like
+the Luke Roberts app 2.4.0 does (tested on a real lamp, see issue #13).
 
 ### Dashboard example
 

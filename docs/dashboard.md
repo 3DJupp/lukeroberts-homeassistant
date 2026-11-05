@@ -166,9 +166,6 @@ type: entities
 title: Diagnostics
 show_header_toggle: false
 entities:
-  - entity: select.esstisch_relative_brightness_mode
-    name: Brighter / Dimmer mode
-    icon: mdi:flask-outline
   - entity: button.esstisch_refresh_scenes
     name: Refresh scenes
     icon: mdi:numeric-10-box-multiple-outline
@@ -185,28 +182,3 @@ entities:
   - entity: update.esstisch_firmware
     name: Firmware
 ```
-
-## Testing Brighter / Dimmer
-
-It is not confirmed yet how the lamp firmware reads the Relative Brightness
-command (opcode `08`). The Lamp Control API v1.3 says it multiplies the
-current brightness by `PP / 100`; the Luke Roberts app 2.4.0 labels the same
-byte as a signed change ("+20 % brighter", "−20 % darker").
-`select.esstisch_relative_brightness_mode` switches between both:
-
-| Mode | Dimmer | Brighter |
-| --- | --- | --- |
-| `multiply` (default) | `A0 02 08 50` (×0.8) | `A0 02 08 7D` (×1.25) |
-| `delta` | `A0 02 08 EC` (−20) | `A0 02 08 14` (+20) |
-
-To find out which one your lamp understands:
-
-1. Select a scene and set the light to 100 %.
-2. Press **Dimmer** a few times, then **Brighter** a few times.
-3. Switch the mode, select the scene again and repeat.
-
-The right mode dims step by step and brightens back up to the scene's
-brightness. With the wrong one the buttons do nothing or the opposite
-(Dimmer brightens, Brighter dims sharply). Note that in both modes the lamp never goes brighter than the
-scene itself. Please report the result in the issue tracker together with
-the firmware version.

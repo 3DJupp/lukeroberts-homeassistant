@@ -114,13 +114,6 @@
     "select": {
       "scene": {
         "name": "Scene"
-      },
-      "relative_brightness_mode": {
-        "name": "Relative brightness mode",
-        "state": {
-          "multiply": "Multiply (API v1.3)",
-          "delta": "Signed change (app 2.4.0)"
-        }
       }
     },
     "sensor": {

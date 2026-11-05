@@ -23,7 +23,7 @@ from homeassistant.const import (
     STATE_ON,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
@@ -166,21 +166,6 @@ async def test_ble_setup_and_control(hass: HomeAssistant) -> None:
         )
         assert client.written == [protocol.next_scene_by_brightness(-1)]
 
-        mode = "select.esstisch_relative_brightness_mode"
-        assert hass.states.get(mode).state == "multiply"
-        client.written.clear()
-        await hass.services.async_call(
-            "button", "press", {ATTR_ENTITY_ID: "button.esstisch_dimmer"}, blocking=True
-        )
-        assert client.written == [protocol.relative_brightness(80)]
-
-        await hass.services.async_call(
-            SELECT_DOMAIN,
-            "select_option",
-            {ATTR_ENTITY_ID: mode, "option": "delta"},
-            blocking=True,
-        )
-        assert hass.states.get(mode).state == "delta"
         client.written.clear()
         await hass.services.async_call(
             "button", "press", {ATTR_ENTITY_ID: "button.esstisch_dimmer"}, blocking=True
@@ -192,8 +177,8 @@ async def test_ble_setup_and_control(hass: HomeAssistant) -> None:
             blocking=True,
         )
         assert client.written == [
-            protocol.relative_brightness_delta(-20),
-            protocol.relative_brightness_delta(20),
+            protocol.relative_brightness(-20),
+            protocol.relative_brightness(20),
         ]
 
         client.written.clear()
@@ -204,6 +189,20 @@ async def test_ble_setup_and_control(hass: HomeAssistant) -> None:
         assert hass.states.get(LIGHT).state == STATE_OFF
 
     assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_removes_pre_release_mode_select(hass: HomeAssistant) -> None:
+    """The test select from 0.2.5b1 is removed from the entity registry."""
+    registry = er.async_get(hass)
+    registry.async_get_or_create(
+        "select",
+        DOMAIN,
+        f"{ADDRESS.lower()}_relative_brightness_mode",
+        suggested_object_id="esstisch_relative_brightness_mode",
+    )
+    await _setup_ble(hass, FakeLampClient())
+    assert registry.async_get("select.esstisch_relative_brightness_mode") is None
+    assert hass.states.get("select.esstisch_scene") is not None
 
 
 async def test_firmware_entity(
