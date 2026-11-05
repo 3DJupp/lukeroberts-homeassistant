@@ -1,9 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.2.6
 
 - Brand images: the neutral lamp drawing is replaced by the Luke Roberts logo
   (icon and logo, with dark mode variants) in `brand/`.
+
 ## 0.2.5
 
 - **Fixed Brighter / Dimmer** (issue #13). The Lamp Control API v1.3 says
