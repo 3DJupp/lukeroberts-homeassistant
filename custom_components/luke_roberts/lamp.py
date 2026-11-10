@@ -1,9 +1,10 @@
 """One Luke Roberts lamp, reachable locally (BLE) and/or through the cloud.
 
 This class behaves like the Luke Roberts app: it talks to the lamp directly
-over Bluetooth when it is in range and can fall back to the cloud. The lamp
-cannot report its state over BLE, so the state kept here is what was last
-sent (assumed state), optionally refreshed from the cloud.
+over Bluetooth when it is in range and can fall back to the cloud. The state
+kept here is what was last sent (assumed state). After every Bluetooth command
+it is corrected with the brightness, colour temperature and on/off the lamp
+reports (undocumented command ``09``), and it can be refreshed from the cloud.
 """
 
 from __future__ import annotations
@@ -70,6 +71,9 @@ class LukeRobertsLamp:
         # Device information read over Bluetooth (monotonic time), None = never.
         self.details_read_at: float | None = None
         self.details_reading = False
+        # Whether the lamp answers the state query (``09``) as expected:
+        # None = not asked yet, False = it does not, so it is not asked again.
+        self.state_readable: bool | None = None
         self._listeners: list[Callable[[], None]] = []
 
     # --- Listener plumbing ----------------------------------------------------
@@ -241,6 +245,7 @@ class LukeRobertsLamp:
             self.state.brightness = brightness
         if kelvin is not None:
             self.state.kelvin = kelvin
+        await self._read_state_after_command()
         self.notify()
 
     async def turn_off(self) -> None:
@@ -255,6 +260,7 @@ class LukeRobertsLamp:
         await self._run(local, cloud)
         self.state.is_on = False
         self.state.scene_id = SCENE_OFF
+        await self._read_state_after_command()
         self.notify()
 
     async def select_scene(self, scene_id: int) -> None:
@@ -276,6 +282,7 @@ class LukeRobertsLamp:
         self.state.is_on = True
         self.state.scene_id = None
         self.state.brightness = 100
+        await self._read_state_after_command()
         self.notify()
 
     async def relative_brightness(self, delta: int) -> None:
@@ -289,6 +296,7 @@ class LukeRobertsLamp:
         await self._run(local, None)
         if self.state.brightness is not None:
             self.state.brightness = max(0, min(100, self.state.brightness + delta))
+        await self._read_state_after_command()
         self.notify()
 
     async def brightness_step(self, direction: int) -> None:
@@ -314,6 +322,57 @@ class LukeRobertsLamp:
             if downlight is not None:
                 self.state.kelvin = downlight.kelvin
         self.notify()
+
+    async def _read_state_after_command(self) -> None:
+        """Replace the assumed state by the lamp's own after a BLE command."""
+        if self.state.last_route == ROUTE_BLUETOOTH:
+            await self.read_state()
+
+    async def read_state(self) -> bool:
+        """Read brightness, colour temperature and on/off from the lamp.
+
+        Uses the undocumented command ``09``. Returns True if the lamp
+        answered and the state was taken over. Never raises: if the lamp
+        cannot be asked, the assumed state stays. A lamp that answers
+        differently, or does not answer before it ever answered correctly,
+        is not asked again until Home Assistant restarts.
+        """
+        if not self.has_local or not self.ble_present or self.state_readable is False:
+            return False
+        assert self.ble is not None
+        try:
+            response = await self.ble.request(protocol.query_state())
+        except TimeoutError:
+            if self.state_readable is None:
+                _LOGGER.debug("%s: no answer to the state query", self.name)
+                self.state_readable = False
+            return False
+        except BLE_ERRORS as err:
+            _LOGGER.debug("%s: state not read: %r", self.name, err)
+            return False
+        light = protocol.parse_state(response)
+        if light is None:
+            _LOGGER.debug(
+                "%s: unexpected answer to the state query: %s; keeping the "
+                "assumed state",
+                self.name,
+                response.hex(" "),
+            )
+            self.state_readable = False
+            return False
+        self.state_readable = True
+        _LOGGER.debug("%s: lamp reports %s", self.name, light)
+        self.state.is_on = light.is_on
+        if light.is_on:
+            self.state.brightness = light.brightness
+            self.state.kelvin = light.kelvin
+            if self.state.scene_id == SCENE_OFF:
+                self.state.scene_id = None  # switched on elsewhere, scene unknown
+        else:
+            # While off the lamp reports brightness 0 and the Off scene's
+            # colour temperature; the last values are kept for turning on.
+            self.state.scene_id = SCENE_OFF
+        return True
 
     async def ping(self) -> int:
         """Ping the lamp and return its highest supported API version."""

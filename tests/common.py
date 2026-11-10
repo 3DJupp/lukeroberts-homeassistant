@@ -57,6 +57,10 @@ class FakeLampClient:
             scene_id: name for scene_id, (_next, name) in self.SCENES.items()
         }
         self.software = b"1.3.2\x00"
+        # Light state as reported by the undocumented state query ``09``.
+        self.is_on = True
+        self.brightness = 49
+        self.kelvin = 3999
         self._callback: Callable[[object, bytearray], None] | None = None
 
     async def start_notify(self, _uuid: str, callback) -> None:
@@ -69,7 +73,27 @@ class FakeLampClient:
         asyncio.get_running_loop().call_soon(self._callback, None, bytearray(reply))
 
     def respond(self, frame: bytes) -> bytes:
+        if frame == b"\x09":
+            return bytes([0x00, 0x88, 0xF4, 0x18, 0x71]) + bytes(
+                [
+                    self.kelvin & 0xFF,
+                    self.kelvin >> 8,
+                    self.brightness if self.is_on else 0,
+                    1 if self.is_on else 0,
+                ]
+            )
         opcode = frame[2]
+        if opcode == 0x03:
+            self.brightness = frame[3]
+        elif opcode == 0x04:
+            self.kelvin = int.from_bytes(frame[3:5], "big")
+        elif opcode == 0x05:
+            self.is_on = frame[3] != 0x00
+            if self.is_on:
+                self.brightness = 42  # a scene brings its own brightness
+        elif opcode == 0x08:
+            delta = int.from_bytes(frame[3:4], "big", signed=True)
+            self.brightness = max(0, min(100, self.brightness + delta))
         if opcode == 0x00:
             return bytes([0x00, 0x02])
         if opcode == 0x01:

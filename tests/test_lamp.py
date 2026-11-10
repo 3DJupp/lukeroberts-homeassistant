@@ -179,6 +179,7 @@ async def test_brightness_step() -> None:
     """Steps send a signed change and add it to the assumed state."""
     ble = _ble()
     lamp = _lamp(MODE_LOCAL_FIRST, ble, None)
+    lamp.state_readable = False  # firmware without the state query
     lamp.state.brightness = 30
     await lamp.brightness_step(-1)
     assert ble.request.await_args.args[0] == protocol.relative_brightness(-20)
@@ -195,3 +196,117 @@ async def test_brightness_step_needs_ble() -> None:
     lamp = _lamp(MODE_LOCAL_FIRST, None, MagicMock())
     with pytest.raises(HomeAssistantError):
         await lamp.brightness_step(1)
+
+
+def _state(kelvin: int, brightness: int, on: bool) -> bytes:
+    return bytes([0x00, 0x88, 0xF4, 0x18, 0x71]) + bytes(
+        [kelvin & 0xFF, kelvin >> 8, brightness, 1 if on else 0]
+    )
+
+
+async def test_command_takes_over_reported_state() -> None:
+    """After a BLE command the lamp's own state replaces the assumed one."""
+    ble = _ble([_state(2700, 42, True)])
+    ble.request_many = AsyncMock(side_effect=lambda frames: [OK] * len(frames))
+    lamp = _lamp(MODE_LOCAL_FIRST, ble, None)
+    lamp.state.is_on = True
+    await lamp.turn_on(scene_id=2)
+    ble.request.assert_awaited_once_with(protocol.query_state())
+    # The scene's own brightness, not the assumed 100 %.
+    assert lamp.state.brightness == 42
+    assert lamp.state.kelvin == 2700
+    assert lamp.state.scene_id == 2
+    assert lamp.state_readable is True
+
+
+async def test_relative_brightness_uses_reported_value() -> None:
+    """Brightness steps show what the lamp made of them, even from unknown."""
+    ble = _ble([OK, _state(3000, 55, True)])
+    lamp = _lamp(MODE_LOCAL_FIRST, ble, None)
+    await lamp.brightness_step(-1)
+    assert ble.request.await_args_list[0].args[0] == protocol.relative_brightness(-20)
+    assert ble.request.await_args_list[1].args[0] == protocol.query_state()
+    assert lamp.state.brightness == 55
+    assert lamp.state.is_on is True
+
+
+async def test_reported_off_keeps_brightness() -> None:
+    """Off reads brightness 0 and the Off scene's Kelvin; the last are kept."""
+    ble = _ble([OK, _state(2700, 0, False)])
+    lamp = _lamp(MODE_LOCAL_FIRST, ble, None)
+    lamp.state.is_on = True
+    lamp.state.brightness = 72
+    lamp.state.kelvin = 3500
+    lamp.state.scene_id = 4
+    await lamp.turn_off()
+    assert lamp.state.is_on is False
+    assert lamp.state.brightness == 72
+    assert lamp.state.kelvin == 3500
+    assert lamp.state.scene_id == 0
+
+
+async def test_reported_on_after_off_forgets_off_scene() -> None:
+    """Switched on elsewhere: on, and the Off scene is no longer claimed."""
+    ble = _ble([_state(4000, 30, True)])
+    lamp = _lamp(MODE_LOCAL_FIRST, ble, None)
+    lamp.state.is_on = False
+    lamp.state.scene_id = 0
+    assert await lamp.read_state()
+    assert lamp.state.is_on is True
+    assert lamp.state.brightness == 30
+    assert lamp.state.scene_id is None
+
+
+async def test_unexpected_state_answer_keeps_assumed_state() -> None:
+    """Firmware that answers differently is not asked again."""
+    ble = _ble([OK, b"\xbc", OK])
+    lamp = _lamp(MODE_LOCAL_FIRST, ble, None)
+    lamp.state.brightness = 30
+    await lamp.brightness_step(1)
+    assert lamp.state.brightness == 50
+    assert lamp.state_readable is False
+    await lamp.brightness_step(1)
+    assert ble.request.await_count == 3  # no second state query
+    assert lamp.state.brightness == 70
+
+
+async def test_state_query_timeout() -> None:
+    """No answer at first: not asked again. After a good answer: asked again."""
+    ble = _ble([OK, TimeoutError()])
+    lamp = _lamp(MODE_LOCAL_FIRST, ble, None)
+    await lamp.brightness_step(1)
+    assert lamp.state_readable is False
+
+    ble = _ble([_state(4000, 30, True), TimeoutError(), _state(4000, 40, True)])
+    lamp = _lamp(MODE_LOCAL_FIRST, ble, None)
+    assert await lamp.read_state()
+    assert not await lamp.read_state()
+    assert lamp.state_readable is True
+    assert await lamp.read_state()
+    assert lamp.state.brightness == 40
+
+
+async def test_state_query_ble_error_and_failed_command() -> None:
+    """A dropped link skips the query; a failed command does not query."""
+    ble = _ble([OK, BleakError("gone")])
+    lamp = _lamp(MODE_LOCAL_FIRST, ble, None)
+    await lamp.brightness_step(1)
+    assert lamp.state_readable is None
+
+    ble = _ble(BleakError("gone"))
+    lamp = _lamp(MODE_LOCAL_ONLY, ble, None)
+    with pytest.raises(HomeAssistantError):
+        await lamp.brightness_step(1)
+    assert ble.request.await_count == 1
+
+
+async def test_cloud_command_does_not_query_state() -> None:
+    """The state query needs Bluetooth; cloud commands keep assumed values."""
+    cloud = MagicMock()
+    cloud.scene = AsyncMock()
+    lamp = _lamp(MODE_CLOUD_FIRST, _ble(), cloud)
+    lamp.state.is_on = True
+    await lamp.turn_on(scene_id=2)
+    assert lamp.state.last_route == ROUTE_CLOUD
+    lamp.ble.request.assert_not_awaited()
+    assert lamp.state.brightness == 100

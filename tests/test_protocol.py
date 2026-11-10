@@ -95,3 +95,41 @@ def test_empty_response() -> None:
     """An empty response is an error."""
     with pytest.raises(protocol.LampError):
         protocol.check_status(b"")
+
+
+def test_query_state() -> None:
+    """The state query is one byte without prefix."""
+    assert protocol.query_state() == b"\x09"
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        # Captured on a Model F, firmware 1.2.2.
+        ("00 88 f4 18 71 8c 0a 48 01", protocol.LightState(True, 72, 2700)),
+        ("00 88 f4 18 71 8c 0a 00 00", protocol.LightState(False, 0, 2700)),
+        ("00 88 f4 18 71 9f 0f 31 01", protocol.LightState(True, 49, 3999)),
+    ],
+)
+def test_parse_state(raw: str, expected: protocol.LightState) -> None:
+    """Kelvin is little endian, then brightness percent and on/off flag."""
+    assert protocol.parse_state(bytes.fromhex(raw)) == expected
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "",
+        "00",
+        "bc",
+        "00 88 f4 18 71 8c 0a 48",  # too short
+        "00 88 f4 18 71 8c 0a 48 01 00",  # too long
+        "00 88 f4 18 72 8c 0a 48 01",  # other magic
+        "81 88 f4 18 71 8c 0a 48 01",  # error status
+        "00 88 f4 18 71 8c 0a 48 02",  # unknown flag
+        "00 88 f4 18 71 8c 0a 65 01",  # brightness above 100
+    ],
+)
+def test_parse_state_rejects(raw: str) -> None:
+    """Anything but the exact known shape is ignored."""
+    assert protocol.parse_state(bytes.fromhex(raw)) is None

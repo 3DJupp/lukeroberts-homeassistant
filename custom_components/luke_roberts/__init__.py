@@ -274,11 +274,12 @@ def _async_schedule_details_read(
 async def _async_read_details(
     hass: HomeAssistant, entry: LukeRobertsConfigEntry
 ) -> None:
-    """Read API version, device information and scene names."""
+    """Read API version, light state, device information and scene names."""
     lamp = entry.runtime_data
     try:
         try:
             await lamp.ping()
+            await lamp.read_state()
             info = await lamp.read_device_info()
         except (HomeAssistantError, *BLE_ERRORS) as err:
             _LOGGER.info(

@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+- **Brightness, colour temperature and on/off read from the lamp.** After
+  every Bluetooth command, and when the lamp details are read at startup, the
+  integration sends the undocumented command `09` (one byte, no `A0` prefix)
+  and takes over the answer `00 88 F4 18 71 KK KK BB FF`: colour temperature
+  in Kelvin (little endian), brightness in percent and `01` on / `00` off.
+  It comes from
+  [martgras/LukeRobertsControl](https://github.com/martgras/LukeRobertsControl)
+  and was confirmed on a Model F with firmware 1.2.2: the percentage matches
+  Modify Brightness (`03`, 30 → 30, 75 → 75, relative −20 → 55) and the Kelvin
+  value matches `04`. Only that exact answer is accepted; firmware that
+  answers differently, or not at all, keeps the assumed state and is not
+  asked again until Home Assistant restarts.
+- A selected scene now shows its **own brightness** (for example 42 %)
+  instead of the assumed 100 %, and Brighter / Dimmer show where the lamp
+  actually ended up.
+
 ## 0.2.6
 
 - Brand images: the neutral lamp drawing is replaced by the Luke Roberts logo
