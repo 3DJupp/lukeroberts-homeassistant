@@ -95,6 +95,10 @@ async def test_ble_setup_and_control(hass: HomeAssistant) -> None:
     state = hass.states.get(LIGHT)
     assert state is not None
     assert state.attributes[ATTR_EFFECT_LIST] == ["Default", "Lesen", "Gemütlich"]
+    # Read from the lamp at startup instead of unknown.
+    assert state.state == STATE_ON
+    assert state.attributes[ATTR_BRIGHTNESS] == 125  # 49 %
+    assert state.attributes[ATTR_COLOR_TEMP_KELVIN] == 3999
     select = hass.states.get("select.esstisch_scene")
     assert select.attributes[ATTR_OPTIONS] == ["Default", "Off", "Lesen", "Gemütlich"]
 
@@ -109,9 +113,15 @@ async def test_ble_setup_and_control(hass: HomeAssistant) -> None:
             {ATTR_ENTITY_ID: LIGHT, ATTR_EFFECT: "Lesen", ATTR_BRIGHTNESS: 128},
             blocking=True,
         )
-        assert client.written == [protocol.select_scene(1), protocol.brightness(50)]
+        assert client.written == [
+            protocol.select_scene(1),
+            protocol.brightness(50),
+            protocol.query_state(),
+        ]
         state = hass.states.get(LIGHT)
         assert state.state == STATE_ON
+        assert state.attributes[ATTR_BRIGHTNESS] == 128
+        assert state.attributes[ATTR_COLOR_TEMP_KELVIN] == 3999
         assert state.attributes[ATTR_EFFECT] == "Lesen"
         assert hass.states.get("select.esstisch_scene").state == "Lesen"
         assert (
@@ -125,7 +135,11 @@ async def test_ble_setup_and_control(hass: HomeAssistant) -> None:
             {ATTR_ENTITY_ID: LIGHT, ATTR_COLOR_TEMP_KELVIN: 3000},
             blocking=True,
         )
-        assert client.written == [protocol.color_temperature(3000)]
+        assert client.written == [
+            protocol.color_temperature(3000),
+            protocol.query_state(),
+        ]
+        assert hass.states.get(LIGHT).attributes[ATTR_COLOR_TEMP_KELVIN] == 3000
 
         client.written.clear()
         await hass.services.async_call(
@@ -155,7 +169,9 @@ async def test_ble_setup_and_control(hass: HomeAssistant) -> None:
             {ATTR_ENTITY_ID: "select.esstisch_scene", "option": "Gemütlich"},
             blocking=True,
         )
-        assert client.written == [protocol.select_scene(2)]
+        assert client.written == [protocol.select_scene(2), protocol.query_state()]
+        # The scene's own brightness as the lamp reports it, not 100 %.
+        assert hass.states.get(LIGHT).attributes[ATTR_BRIGHTNESS] == 107
 
         client.written.clear()
         await hass.services.async_call(
@@ -164,7 +180,10 @@ async def test_ble_setup_and_control(hass: HomeAssistant) -> None:
             {ATTR_ENTITY_ID: "button.esstisch_next_dimmer_scene"},
             blocking=True,
         )
-        assert client.written == [protocol.next_scene_by_brightness(-1)]
+        assert client.written == [
+            protocol.next_scene_by_brightness(-1),
+            protocol.query_state(),
+        ]
 
         client.written.clear()
         await hass.services.async_call(
@@ -178,15 +197,29 @@ async def test_ble_setup_and_control(hass: HomeAssistant) -> None:
         )
         assert client.written == [
             protocol.relative_brightness(-20),
+            protocol.query_state(),
             protocol.relative_brightness(20),
+            protocol.query_state(),
         ]
+        assert hass.states.get(LIGHT).attributes[ATTR_BRIGHTNESS] == 107
 
         client.written.clear()
         await hass.services.async_call(
             LIGHT_DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: LIGHT}, blocking=True
         )
-        assert client.written == [protocol.select_scene(0)]
+        assert client.written == [protocol.select_scene(0), protocol.query_state()]
         assert hass.states.get(LIGHT).state == STATE_OFF
+
+        # Switched on elsewhere (app, click detection): the next query shows it.
+        client.is_on = True
+        client.brightness = 30
+        client.written.clear()
+        await hass.services.async_call(
+            "button", "press", {ATTR_ENTITY_ID: "button.esstisch_dimmer"}, blocking=True
+        )
+        state = hass.states.get(LIGHT)
+        assert state.state == STATE_ON
+        assert state.attributes[ATTR_BRIGHTNESS] == 26  # 10 %
 
     assert await hass.config_entries.async_unload(entry.entry_id)
 

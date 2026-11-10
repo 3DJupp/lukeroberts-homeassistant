@@ -41,6 +41,13 @@ class Opcode(IntEnum):
     RELATIVE_BRIGHTNESS = 0x08
 
 
+# Undocumented single byte command that returns the light state, see
+# ``query_state``. It has no ``A0`` prefix and no version byte.
+QUERY_STATE = 0x09
+STATE_MAGIC = bytes([0x00, 0x88, 0xF4, 0x18, 0x71])
+STATE_LENGTH = 9
+
+
 class LampError(Exception):
     """The lamp answered with a non-OK status."""
 
@@ -140,6 +147,16 @@ def relative_brightness(delta: int) -> bytes:
     )
 
 
+def query_state() -> bytes:
+    """Undocumented ``09``: ask for brightness, colour temperature and on/off.
+
+    Not part of the Lamp Control API v1.3. Taken from
+    github.com/martgras/LukeRobertsControl and confirmed on a Model F with
+    firmware 1.2.2, see ``parse_state`` for the answer.
+    """
+    return bytes([QUERY_STATE])
+
+
 @dataclass(frozen=True, slots=True)
 class Uplight:
     """Uplight sub-packet of Immediate Light (indirect, colour capable)."""
@@ -222,3 +239,31 @@ def parse_query_scene(scene_id: int, response: bytes) -> SceneInfo:
         raw = raw[:end]
     name = raw.decode("utf-8", errors="replace").strip()
     return SceneInfo(scene_id=scene_id, name=name, next_id=next_id)
+
+
+@dataclass(frozen=True, slots=True)
+class LightState:
+    """State reported by the lamp in answer to ``query_state``."""
+
+    is_on: bool
+    brightness: int  # percent 0..100, same scale as opcode 03
+    kelvin: int  # same value as opcode 04 sets
+
+
+def parse_state(response: bytes) -> LightState | None:
+    """Parse ``00 88 F4 18 71 KK KK BB FF``, None for any other answer.
+
+    ``KK KK`` is the colour temperature in Kelvin, little endian (unlike the
+    rest of the API), ``BB`` the brightness in percent and ``FF`` ``01`` while
+    the lamp is on and ``00`` while it is off (brightness then reads 0). Only
+    this exact shape is accepted, so firmware that answers differently keeps
+    the assumed state.
+    """
+    if len(response) != STATE_LENGTH or not response.startswith(STATE_MAGIC):
+        return None
+    kelvin = struct.unpack_from("<H", response, 5)[0]
+    level = response[7]
+    flag = response[8]
+    if flag not in (0x00, 0x01) or level > 100:
+        return None
+    return LightState(is_on=flag == 0x01, brightness=level, kelvin=kelvin)

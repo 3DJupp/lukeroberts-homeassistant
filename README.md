@@ -144,12 +144,25 @@ Buttons only work over Bluetooth, the cloud API has no equivalent.
 
 ### How state works
 
-The lamp cannot report its current state over Bluetooth, so the integration
-keeps an *assumed state* based on the commands it sent (like the ESPHome
-gateway did). Brightness is relative to the active scene: 100 % is the scene as
-designed in the app. Changes made with the app or the lamp's click detection
-are not visible locally. If the cloud is linked, the integration also polls
-`GET /lamps/{id}/state` every minute to correct the assumed state.
+The integration keeps an *assumed state* based on the commands it sent (like
+the ESPHome gateway did) and corrects it with what the lamp reports.
+
+**Brightness, colour temperature and on/off** are read from the lamp after
+every Bluetooth command and when Home Assistant reads the lamp details at
+startup, with the command `09`. It is not in the Lamp Control API v1.3
+document; it comes from
+[martgras/LukeRobertsControl](https://github.com/martgras/LukeRobertsControl)
+and was confirmed on a Model F with firmware 1.2.2. The brightness uses the
+same percentage as the light's brightness slider, and a scene brings its own
+(for example 42 % for a dim scene), so after picking a scene the light shows
+that value instead of 100 %. Firmware that answers differently keeps the
+assumed state.
+
+Between commands nothing is read (the lamp allows only one Bluetooth
+connection, which the app needs too), so changes made with the app or the
+lamp's click detection show up with the next command. If the cloud is linked,
+the integration also polls `GET /lamps/{id}/state` every minute to correct the
+assumed state.
 
 ### Immediate light example
 
