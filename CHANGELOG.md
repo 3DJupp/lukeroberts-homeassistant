@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- **Active scene read from the lamp.** On every Bluetooth connection the
+  integration reads the scene characteristic `44092844-…` (one byte, the
+  active scene id) and subscribes to its notifications, so the scene select,
+  the light's effect and on/off follow scenes chosen in the app or with click
+  detection. This characteristic is not in the Lamp Control API v1.3
+  document; it was confirmed on a Model F with firmware 1.2.2 (reads `01`
+  while scene 1 "Indirect" was active). Firmware without it keeps the
+  assumed state as before.
+- The lamp notifies the new scene *before* it answers the command, so after
+  *Next brighter/dimmer scene* the select now shows the scene the lamp
+  actually stepped to instead of going blank, and *Default* shows the real
+  scene behind it.
+
 ## 0.2.6
 
 - Brand images: the neutral lamp drawing is replaced by the Luke Roberts logo

@@ -64,3 +64,41 @@ async def test_device_info() -> None:
             "software": "1.3.2",
         }
         await ble.disconnect()
+
+
+async def test_active_scene_read_and_followed() -> None:
+    """The active scene is read on connect and followed via notifications."""
+    client = FakeLampClient()
+    client.active_scene = 2
+    seen: list[int] = []
+    with patch(
+        "custom_components.luke_roberts.ble.establish_connection",
+        AsyncMock(return_value=client),
+    ):
+        ble = LukeRobertsBle(service_info().device, "Lamp", linger=10)
+        ble.add_scene_listener(seen.append)
+        await ble.request(protocol.ping())
+        assert seen == [2]
+        client.push_scene(1)
+        assert seen == [2, 1]
+        # An empty notification carries no scene and is ignored.
+        assert client.scene_callback is not None
+        client.scene_callback(None, bytearray())
+        assert seen == [2, 1]
+        await ble.disconnect()
+
+
+async def test_missing_scene_characteristic_is_ignored() -> None:
+    """Firmware without the scene characteristic still works."""
+    client = FakeLampClient()
+    client.active_scene = None
+    seen: list[int] = []
+    with patch(
+        "custom_components.luke_roberts.ble.establish_connection",
+        AsyncMock(return_value=client),
+    ):
+        ble = LukeRobertsBle(service_info().device, "Lamp", linger=0)
+        ble.add_scene_listener(seen.append)
+        assert await ble.request(protocol.select_scene(1)) == b"\x00"
+        assert seen == []
+        await ble.disconnect()

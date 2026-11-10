@@ -195,3 +195,59 @@ async def test_brightness_step_needs_ble() -> None:
     lamp = _lamp(MODE_LOCAL_FIRST, None, MagicMock())
     with pytest.raises(HomeAssistantError):
         await lamp.brightness_step(1)
+
+
+def test_scene_reported_updates_assumed_state() -> None:
+    """A scene reported by the lamp replaces the assumed scene and on/off."""
+    lamp = _lamp(MODE_LOCAL_FIRST, _ble(), None)
+    lamp.state.scenes = {0: "Off", 1: "Indirect", 2: "Evening"}
+    lamp.state.brightness = 40
+    listener = MagicMock()
+    lamp.add_listener(listener)
+
+    lamp.scene_reported(2)
+    assert lamp.state.scene_id == 2
+    assert lamp.state.is_on
+    assert lamp.scene_name(lamp.state.scene_id) == "Evening"
+    assert lamp.state.brightness == 40
+    listener.assert_called_once()
+
+    lamp.scene_reported(2)
+    listener.assert_called_once()
+
+    lamp.scene_reported(0)
+    assert lamp.state.is_on is False
+    assert listener.call_count == 2
+
+
+async def test_scene_report_during_command_wins() -> None:
+    """The lamp notifies the new scene before it answers the command."""
+    ble = _ble()
+    lamp = _lamp(MODE_LOCAL_FIRST, ble, None)
+    lamp.state.is_on = True
+
+    async def next_scene_then_answer(_frame: bytes) -> bytes:
+        lamp.scene_reported(4)
+        return OK
+
+    ble.request = AsyncMock(side_effect=next_scene_then_answer)
+    await lamp.next_scene(1)
+    assert lamp.state.scene_id == 4
+
+    async def default_then_answer(frames: list[bytes]) -> list[bytes]:
+        lamp.scene_reported(1)
+        return [OK] * len(frames)
+
+    lamp.state.is_on = False
+    ble.request_many = AsyncMock(side_effect=default_then_answer)
+    await lamp.turn_on()
+    assert lamp.state.scene_id == 1
+    assert lamp.state.brightness == 100
+
+
+async def test_next_scene_without_report_is_unknown() -> None:
+    """Without a scene report the scene after a step stays unknown."""
+    lamp = _lamp(MODE_LOCAL_FIRST, _ble(), None)
+    lamp.state.scene_id = 2
+    await lamp.next_scene(1)
+    assert lamp.state.scene_id is None
