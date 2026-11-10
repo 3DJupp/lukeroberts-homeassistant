@@ -10,6 +10,9 @@ MANUFACTURER: Final = "Luke Roberts"
 # --- Bluetooth LE (Lamp Control API v1.3) -----------------------------------
 SERVICE_UUID: Final = "44092840-0567-11e6-b862-0002a5d5c51b"
 API_CHAR_UUID: Final = "44092842-0567-11e6-b862-0002a5d5c51b"
+# Active scene id, one byte (read and notify). Not part of the Lamp Control API
+# v1.3 document; confirmed on a Model F with firmware 1.2.2.
+SCENE_CHAR_UUID: Final = "44092844-0567-11e6-b862-0002a5d5c51b"
 # Scene records, written like the Luke Roberts app 2.4.0 does. The lamp answers
 # on the API characteristic.
 

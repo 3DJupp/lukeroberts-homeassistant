@@ -239,7 +239,10 @@ async def _setup_cloud_polling(
 def _watch_connection(
     hass: HomeAssistant, entry: LukeRobertsConfigEntry, ble: LukeRobertsBle
 ) -> None:
-    """Catch up on the lamp details as soon as a connection succeeds."""
+    """Catch up on the lamp details as soon as a connection succeeds.
+
+    Also follow the active scene the lamp reports on every connection.
+    """
 
     @callback
     def _connected(connected: bool) -> None:
@@ -247,6 +250,7 @@ def _watch_connection(
             _async_schedule_details_read(hass, entry)
 
     entry.async_on_unload(ble.add_connection_listener(_connected))
+    entry.async_on_unload(ble.add_scene_listener(entry.runtime_data.scene_reported))
 
 
 @callback

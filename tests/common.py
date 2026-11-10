@@ -8,9 +8,10 @@ import time
 
 from bleak.backends.device import BLEDevice
 from bleak.backends.scanner import AdvertisementData
+from bleak.exc import BleakError
 from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
 
-from custom_components.luke_roberts.const import SERVICE_UUID
+from custom_components.luke_roberts.const import SCENE_CHAR_UUID, SERVICE_UUID
 
 ADDRESS = "AA:BB:CC:DD:EE:FF"
 
@@ -57,10 +58,24 @@ class FakeLampClient:
             scene_id: name for scene_id, (_next, name) in self.SCENES.items()
         }
         self.software = b"1.3.2\x00"
+        # Active scene id; None mimics firmware without the scene characteristic.
+        self.active_scene: int | None = 1
         self._callback: Callable[[object, bytearray], None] | None = None
+        self.scene_callback: Callable[[object, bytearray], None] | None = None
 
-    async def start_notify(self, _uuid: str, callback) -> None:
+    async def start_notify(self, uuid: str, callback) -> None:
+        if uuid == SCENE_CHAR_UUID:
+            if self.active_scene is None:
+                raise BleakError("Characteristic not found")
+            self.scene_callback = callback
+            return
         self._callback = callback
+
+    def push_scene(self, scene_id: int) -> None:
+        """Simulate the lamp switching scene, e.g. from the app."""
+        self.active_scene = scene_id
+        assert self.scene_callback is not None
+        self.scene_callback(None, bytearray([scene_id]))
 
     async def write_gatt_char(self, uuid: str, data: bytes, response: bool) -> None:
         self.written.append(bytes(data))
@@ -82,6 +97,10 @@ class FakeLampClient:
         return b"\x00"
 
     async def read_gatt_char(self, uuid: str) -> bytes:
+        if uuid == SCENE_CHAR_UUID:
+            if self.active_scene is None:
+                raise BleakError("Characteristic not found")
+            return bytes([self.active_scene])
         return {
             "00002a24-0000-1000-8000-00805f9b34fb": b"Model F\x00",
             "00002a26-0000-1000-8000-00805f9b34fb": b"21.3",

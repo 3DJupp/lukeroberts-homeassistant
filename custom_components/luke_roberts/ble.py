@@ -35,6 +35,7 @@ from .const import (
     DIS_SOFTWARE_UUID,
     KEEPALIVE_INTERVAL,
     RESPONSE_TIMEOUT,
+    SCENE_CHAR_UUID,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -70,6 +71,7 @@ class LukeRobertsBle:
         self._last_command = 0.0
         self._keepalive_task: asyncio.Task[None] | None = None
         self._connection_listeners: list[Callable[[bool], None]] = []
+        self._scene_listeners: list[Callable[[int], None]] = []
 
     @property
     def connected(self) -> bool:
@@ -90,6 +92,34 @@ class LukeRobertsBle:
     def _notify_connection(self, connected: bool) -> None:
         for listener in list(self._connection_listeners):
             listener(connected)
+
+    def add_scene_listener(self, listener: Callable[[int], None]) -> Callable[[], None]:
+        """Register a callback for the active scene id reported by the lamp."""
+        self._scene_listeners.append(listener)
+        return lambda: self._scene_listeners.remove(listener)
+
+    def _report_scene(self, data: bytes | bytearray) -> None:
+        if not data:
+            return
+        scene_id = data[0]
+        _LOGGER.debug("%s: active scene %d", self._name, scene_id)
+        for listener in list(self._scene_listeners):
+            listener(scene_id)
+
+    def _on_scene_notification(self, _sender: object, data: bytearray) -> None:
+        self._report_scene(data)
+
+    async def _watch_scene(self, client: BleakClientWithServiceCache) -> None:
+        """Read the active scene and follow changes while the link is up.
+
+        Firmware without the scene characteristic simply keeps the assumed
+        state, so every failure here is logged and ignored.
+        """
+        try:
+            await client.start_notify(SCENE_CHAR_UUID, self._on_scene_notification)
+            self._report_scene(await client.read_gatt_char(SCENE_CHAR_UUID))
+        except Exception as err:  # noqa: BLE001 - optional characteristic
+            _LOGGER.debug("%s: active scene not readable: %r", self._name, err)
 
     # --- Connection handling --------------------------------------------------
 
@@ -117,6 +147,7 @@ class LukeRobertsBle:
                 raise
             self._client = client
             _LOGGER.debug("%s: connected", self._name)
+            await self._watch_scene(client)
             self._notify_connection(True)
             return client
 

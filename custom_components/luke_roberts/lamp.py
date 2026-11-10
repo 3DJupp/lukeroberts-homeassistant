@@ -71,6 +71,9 @@ class LukeRobertsLamp:
         self.details_read_at: float | None = None
         self.details_reading = False
         self._listeners: list[Callable[[], None]] = []
+        # Counts scene reports from the lamp, to tell whether one arrived while
+        # a command ran (the lamp notifies before it answers the command).
+        self._scene_reports = 0
 
     # --- Listener plumbing ----------------------------------------------------
 
@@ -230,9 +233,13 @@ class LukeRobertsLamp:
             if kelvin is not None:
                 await api.kelvin(lamp_id, kelvin)
 
+        reports = self._scene_reports
         await self._run(local, cloud)
         if select is not None:
-            self.state.scene_id = select
+            # A scene the lamp reported meanwhile is more precise (e.g. the
+            # real id behind "Default"), so it is kept.
+            if self._scene_reports == reports:
+                self.state.scene_id = select
             # A newly selected scene brings its own brightness and colour.
             self.state.brightness = 100
             self.state.kelvin = None
@@ -272,9 +279,11 @@ class LukeRobertsLamp:
                 await ble.request(protocol.next_scene_by_brightness(direction))
             )
 
+        reports = self._scene_reports
         await self._run(local, None)
         self.state.is_on = True
-        self.state.scene_id = None
+        if self._scene_reports == reports:
+            self.state.scene_id = None
         self.state.brightness = 100
         self.notify()
 
@@ -313,6 +322,21 @@ class LukeRobertsLamp:
             self.state.is_on = True
             if downlight is not None:
                 self.state.kelvin = downlight.kelvin
+        self.notify()
+
+    def scene_reported(self, scene_id: int) -> None:
+        """Take over the active scene the lamp reported over Bluetooth.
+
+        Only the scene and on/off follow; brightness and colour temperature
+        stay as assumed, since the lamp reports the scene before a brightness
+        command in the same batch is applied.
+        """
+        self._scene_reports += 1
+        is_on = scene_id != SCENE_OFF
+        if self.state.scene_id == scene_id and self.state.is_on == is_on:
+            return
+        self.state.scene_id = scene_id
+        self.state.is_on = is_on
         self.notify()
 
     async def ping(self) -> int:
